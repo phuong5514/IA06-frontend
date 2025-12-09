@@ -1,19 +1,21 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
-import SignUp from './pages/SignUp';
-import SignIn from './pages/SignIn';
+import { AuthProvider } from './context/AuthContext';
+import Header from './components/Header';
+import HomeSection from './components/HomeSection';
+import SignInSection from './components/SignInSection';
+import SignUpSection from './components/SignUpSection';
 
 function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/signin" element={<SignIn />} />
-        </Routes>
+    <AuthProvider>
+      <div className="min-h-screen">
+        <Header />
+        <main>
+          <HomeSection />
+          <SignInSection />
+          <SignUpSection />
+        </main>
       </div>
-    </Router>
+    </AuthProvider>
   );
 }
 
