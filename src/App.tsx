@@ -25,7 +25,7 @@ function App() {
   return (
     <AuthProvider>
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
-        <Header onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
+        <Header onOpenSignIn={openSignIn} onOpenSignUp={openSignUp}/>
         <Home onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
         <AuthModal
           isOpen={isModalOpen}
@@ -34,7 +34,6 @@ function App() {
           onSwitchMode={switchMode}
         />
       </div>
-    </AuthProvider>
     </AuthProvider>
   );
 }

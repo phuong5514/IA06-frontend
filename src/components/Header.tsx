@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-function Header() {
+type HeaderProps = {
+  onOpenSignIn: () => void;
+  onOpenSignUp: () => void;
+}
+
+
+function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, logout } = useAuth();
-
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-      setIsMenuOpen(false);
-    }
-  };
 
   const handleLogout = () => {
     logout();
@@ -24,7 +22,7 @@ function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer" onClick={() => scrollToSection('home')}>
+            <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer">
               MyApp
             </h1>
           </div>
@@ -34,13 +32,13 @@ function Header() {
             {!user ? (
               <>
                 <button
-                  onClick={() => scrollToSection('signin')}
+                  onClick={onOpenSignIn}
                   className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
                 >
                   Sign In
                 </button>
                 <button
-                  onClick={() => scrollToSection('signup')}
+                  onClick={onOpenSignUp}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition"
                 >
                   Sign Up
@@ -96,13 +94,13 @@ function Header() {
             {!user ? (
               <>
                 <button
-                  onClick={() => scrollToSection('signin')}
+                  onClick={onOpenSignIn}
                   className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
                 >
                   Sign In
                 </button>
                 <button
-                  onClick={() => scrollToSection('signup')}
+                  onClick={onOpenSignUp}
                   className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
                 >
                   Sign Up
