@@ -1,6 +1,6 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { API_ENDPOINTS, apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 
 type AuthModalProps = {
@@ -24,7 +24,8 @@ type SignUpFormData = {
 function AuthModal({ isOpen, onClose, mode, onSwitchMode }: AuthModalProps) {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, register: registerUser } = useAuth();
+  const navigate = useNavigate();
 
   const {
     register,
@@ -47,27 +48,15 @@ function AuthModal({ isOpen, onClose, mode, onSwitchMode }: AuthModalProps) {
     setLoading(true);
 
     try {
-      const response = await apiClient.post(API_ENDPOINTS.LOGIN, {
-        email: data.email,
-        password: data.password,
-      });
-
-      const responseData = response.data;
-
-      if (responseData.success) {
-        setMessage('Login successful!');
-        // Store access token and refresh token if provided
-        const accessToken = responseData.accessToken || responseData.access_token;
-        const refreshToken = responseData.refreshToken || responseData.refresh_token;
-        login(data.email, accessToken, refreshToken);
-        setTimeout(() => {
-          handleClose();
-        }, 1000);
-      } else {
-        setMessage(responseData.message);
-      }
-    } catch (error) {
-      setMessage(`Error: ${error}`);
+      await login(data.email, data.password);
+      setMessage('Login successful!');
+      setTimeout(() => {
+        handleClose();
+        navigate('/dashboard');
+      }, 500);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Login failed';
+      setMessage(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -78,26 +67,19 @@ function AuthModal({ isOpen, onClose, mode, onSwitchMode }: AuthModalProps) {
     setLoading(true);
 
     try {
-      const response = await apiClient.post(API_ENDPOINTS.REGISTER, {
-        email: data.email,
-        password: data.password,
-      });
-
-      const responseData = response.data;
-      setMessage(responseData.message);
-
-      if (responseData.success) {
+      await registerUser(data.email, data.password);
+      setMessage('Account created successfully!');
+      setTimeout(() => {
+        setMessage('Switching to sign in...');
         setTimeout(() => {
-          setMessage('Account created! Switching to sign in...');
-          setTimeout(() => {
-            onSwitchMode();
-            reset();
-            setMessage('');
-          }, 1000);
-        }, 1500);
-      }
-    } catch (error) {
-      setMessage(`Error: ${error instanceof Error ? error.message : String(error)}`);
+          onSwitchMode();
+          reset();
+          setMessage('');
+        }, 1000);
+      }, 1500);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Registration failed';
+      setMessage(errorMessage);
     } finally {
       setLoading(false);
     }

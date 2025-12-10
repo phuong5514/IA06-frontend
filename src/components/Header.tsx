@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 type HeaderProps = {
@@ -9,10 +10,26 @@ type HeaderProps = {
 
 function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setIsMenuOpen(false);
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const goToDashboard = () => {
+    navigate('/dashboard');
+    setIsMenuOpen(false);
+  };
+
+  const goToHome = () => {
+    navigate('/');
     setIsMenuOpen(false);
   };
 
@@ -22,14 +39,17 @@ function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <h1 className="text-2xl font-bold text-indigo-600 cursor-pointer">
+            <h1 
+              onClick={goToHome}
+              className="text-2xl font-bold text-indigo-600 cursor-pointer"
+            >
               MyApp
             </h1>
           </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-4">
-            {!user ? (
+            {!isAuthenticated ? (
               <>
                 <button
                   onClick={onOpenSignIn}
@@ -46,7 +66,13 @@ function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
               </>
             ) : (
               <>
-                <span className="text-gray-700">Welcome, {user.email}</span>
+                <button
+                  onClick={goToDashboard}
+                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+                >
+                  Dashboard
+                </button>
+                <span className="text-gray-700">Welcome, {user?.email}</span>
                 <button
                   onClick={handleLogout}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition"
@@ -91,16 +117,22 @@ function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden border-t border-gray-200 py-4 space-y-2">
-            {!user ? (
+            {!isAuthenticated ? (
               <>
                 <button
-                  onClick={onOpenSignIn}
+                  onClick={() => {
+                    onOpenSignIn();
+                    setIsMenuOpen(false);
+                  }}
                   className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
                 >
                   Sign In
                 </button>
                 <button
-                  onClick={onOpenSignUp}
+                  onClick={() => {
+                    onOpenSignUp();
+                    setIsMenuOpen(false);
+                  }}
                   className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
                 >
                   Sign Up
@@ -108,8 +140,14 @@ function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
               </>
             ) : (
               <>
-                <div className="px-4 py-2 text-gray-700 border-b border-gray-200">
-                  Welcome, {user.email}
+                <button
+                  onClick={goToDashboard}
+                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+                >
+                  Dashboard
+                </button>
+                <div className="px-4 py-2 text-gray-600">
+                  {user?.email}
                 </div>
                 <button
                   onClick={handleLogout}

@@ -2,18 +2,39 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
+// In-memory token storage
+let accessToken: string | null = null;
+
+export const tokenManager = {
+  getAccessToken: () => accessToken,
+  setAccessToken: (token: string | null) => {
+    accessToken = token;
+    // Broadcast token change to other tabs
+    if (token) {
+      localStorage.setItem('token_event', JSON.stringify({ type: 'token_set', timestamp: Date.now() }));
+    } else {
+      localStorage.setItem('token_event', JSON.stringify({ type: 'token_cleared', timestamp: Date.now() }));
+    }
+  },
+  clearAccessToken: () => {
+    accessToken = null;
+    localStorage.setItem('token_event', JSON.stringify({ type: 'token_cleared', timestamp: Date.now() }));
+  },
+};
+
 // Create axios instance with default config
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Important for cookies
 });
 
 // Add request interceptor to attach access token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = tokenManager.getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -24,6 +45,21 @@ apiClient.interceptors.request.use(
   }
 );
 
+// Response interceptor to handle token refresh
+let isRefreshing = false;
+let failedQueue: Array<{ resolve: (value?: unknown) => void; reject: (reason?: unknown) => void }> = [];
+
+const processQueue = (error: Error | null, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 // Add response interceptor to handle token refresh
 apiClient.interceptors.response.use(
   (response) => response,
@@ -32,34 +68,54 @@ apiClient.interceptors.response.use(
 
     // If error is 401 and we haven't retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // If already refreshing, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return apiClient(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) {
-          throw new Error('No refresh token');
+        // Try to refresh the token using cookie
+        const response = await axios.post(
+          `${API_BASE_URL}/user/refresh`,
+          {},
+          { withCredentials: true }
+        );
+
+        if (response.data.success) {
+          const { accessToken: newAccessToken } = response.data;
+          
+          // Store new access token in memory
+          tokenManager.setAccessToken(newAccessToken);
+
+          // Update the authorization header
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+          processQueue(null, newAccessToken);
+          
+          // Retry the original request
+          return apiClient(originalRequest);
         }
-
-        // Try to refresh the token
-        const response = await axios.post(`${API_BASE_URL}/user/refresh`, {
-          refreshToken,
-        });
-
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
-
-        // Store new tokens
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', newRefreshToken);
-
-        // Retry original request with new token
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        return apiClient(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, clear tokens and redirect to login
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '#signin';
+        // Refresh failed, clear tokens and notify tabs
+        processQueue(refreshError as Error, null);
+        tokenManager.clearAccessToken();
+        
+        // Broadcast logout to other tabs
+        localStorage.setItem('auth_event', JSON.stringify({ type: 'logout', timestamp: Date.now() }));
+        
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 

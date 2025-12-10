@@ -1,8 +1,13 @@
 import { useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './config/queryClient';
 import { AuthProvider } from './context/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import Header from './components/Header';
 import AuthModal from './components/AuthModal';
 import Home from './pages/Home';
+import Dashboard from './pages/Dashboard';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -23,18 +28,37 @@ function App() {
   };
 
   return (
-    <AuthProvider>
-      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
-        <Header onOpenSignIn={openSignIn} onOpenSignUp={openSignUp}/>
-        <Home onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
-        <AuthModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          mode={modalMode}
-          onSwitchMode={switchMode}
-        />
-      </div>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
+                  <Header onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
+                  <Home onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
+                  <AuthModal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    mode={modalMode}
+                    onSwitchMode={switchMode}
+                  />
+                </div>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 
