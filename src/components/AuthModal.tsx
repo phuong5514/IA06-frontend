@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { API_ENDPOINTS } from '../config/api';
+import { API_ENDPOINTS, apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 
 type AuthModalProps = {
@@ -47,19 +47,19 @@ function AuthModal({ isOpen, onClose, mode, onSwitchMode }: AuthModalProps) {
     setLoading(true);
 
     try {
-      const response = await fetch(API_ENDPOINTS.LOGIN, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: data.email, password: data.password }),
+      const response = await apiClient.post(API_ENDPOINTS.LOGIN, {
+        email: data.email,
+        password: data.password,
       });
 
-      const responseData = await response.json();
+      const responseData = response.data;
 
       if (responseData.success) {
         setMessage('Login successful!');
-        login(data.email);
+        // Store access token and refresh token if provided
+        const accessToken = responseData.accessToken || responseData.access_token;
+        const refreshToken = responseData.refreshToken || responseData.refresh_token;
+        login(data.email, accessToken, refreshToken);
         setTimeout(() => {
           handleClose();
         }, 1000);
@@ -78,25 +78,12 @@ function AuthModal({ isOpen, onClose, mode, onSwitchMode }: AuthModalProps) {
     setLoading(true);
 
     try {
-      const response = await fetch(API_ENDPOINTS.REGISTER, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: data.email, password: data.password }),
+      const response = await apiClient.post(API_ENDPOINTS.REGISTER, {
+        email: data.email,
+        password: data.password,
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        throw new Error(`Expected JSON response but got: ${text}`);
-      }
-
-      const responseData = await response.json();
+      const responseData = response.data;
       setMessage(responseData.message);
 
       if (responseData.success) {

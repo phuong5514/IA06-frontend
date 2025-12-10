@@ -8,9 +8,10 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string) => void;
+  login: (email: string, accessToken?: string, refreshToken?: string) => void;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
+  getAccessToken: () => string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,10 +27,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = (email: string) => {
+  const login = (email: string, accessToken?: string, refreshToken?: string) => {
     const userData = { email };
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
+    
+    // Store tokens if provided
+    if (accessToken) {
+      localStorage.setItem('accessToken', accessToken);
+    }
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
+  };
+
+  const getAccessToken = () => {
+    return localStorage.getItem('accessToken');
   };
 
   const logout = async () => {
@@ -57,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, getAccessToken }}>
       {children}
     </AuthContext.Provider>
   );
