@@ -9,16 +9,9 @@ export const tokenManager = {
   getAccessToken: () => accessToken,
   setAccessToken: (token: string | null) => {
     accessToken = token;
-    // Broadcast token change to other tabs
-    if (token) {
-      localStorage.setItem('token_event', JSON.stringify({ type: 'token_set', timestamp: Date.now() }));
-    } else {
-      localStorage.setItem('token_event', JSON.stringify({ type: 'token_cleared', timestamp: Date.now() }));
-    }
   },
   clearAccessToken: () => {
     accessToken = null;
-    localStorage.setItem('token_event', JSON.stringify({ type: 'token_cleared', timestamp: Date.now() }));
   },
 };
 
@@ -106,12 +99,9 @@ apiClient.interceptors.response.use(
           return apiClient(originalRequest);
         }
       } catch (refreshError) {
-        // Refresh failed, clear tokens and notify tabs
+        // Refresh failed, clear tokens
         processQueue(refreshError as Error, null);
         tokenManager.clearAccessToken();
-        
-        // Broadcast logout to other tabs
-        localStorage.setItem('auth_event', JSON.stringify({ type: 'logout', timestamp: Date.now() }));
         
         return Promise.reject(refreshError);
       } finally {

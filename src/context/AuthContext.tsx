@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import type { ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { API_ENDPOINTS, apiClient, tokenManager } from '../config/api';
+import { tabSyncManager } from '../utils/tabSync';
 
 interface User {
   email: string;
@@ -61,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
         
         // Broadcast login to other tabs
-        localStorage.setItem('auth_event', JSON.stringify({ type: 'login', timestamp: Date.now() }));
+        tabSyncManager.broadcast({ type: 'login', timestamp: Date.now() });
       } else {
         // Handle unsuccessful login (backend returned success: false)
         throw new Error(data.message || 'Login failed');
@@ -100,45 +101,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.clear();
       
       // Broadcast logout to other tabs
-      localStorage.setItem('auth_event', JSON.stringify({ type: 'logout', timestamp: Date.now() }));
+      tabSyncManager.broadcast({ type: 'logout', timestamp: Date.now() });
     },
   });
 
-  // Listen for auth events from other tabs
+  // Listen for auth events from other tabs using BroadcastChannel/localStorage
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'auth_event') {
-        const event = JSON.parse(e.newValue || '{}');
-        
-        if (event.type === 'logout') {
-          // Another tab logged out
-          tokenManager.clearAccessToken();
-          setUser(null);
-          queryClient.clear();
-        } else if (event.type === 'login') {
-          // Another tab logged in - try to refetch user
-          refetchUser();
-        }
-      } else if (e.key === 'token_event') {
-        const event = JSON.parse(e.newValue || '{}');
-        
-        if (event.type === 'token_cleared') {
-          // Token was cleared in another tab
-          setUser(null);
-          queryClient.clear();
-        } else if (event.type === 'token_set') {
-          // Token was set in another tab - try to refetch user
+    const unsubscribe = tabSyncManager.subscribe((event) => {
+      if (event.type === 'logout') {
+        // Another tab logged out
+        tokenManager.clearAccessToken();
+        setUser(null);
+        queryClient.clear();
+      } else if (event.type === 'login' || event.type === 'token_refresh') {
+        // Another tab logged in or refreshed token - try to sync
+        const trySync = async () => {
+          try {
+            const response = await apiClient.post(API_ENDPOINTS.REFRESH, {});
+            if (response.data.success && response.data.accessToken) {
+              tokenManager.setAccessToken(response.data.accessToken);
+              refetchUser();
+            }
+          } catch (error) {
+            // Failed to sync, ignore
+            console.warn('Failed to sync auth state:', error);
+          }
+        };
+        trySync();
+      }
+    });
+
+    return unsubscribe;
+  }, [queryClient, refetchUser]);
+
+  // Detect when tab becomes visible and check auth state
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        // Tab became visible, check if we need to refresh auth
+        if (!tokenManager.getAccessToken()) {
+          try {
+            const response = await apiClient.post(API_ENDPOINTS.REFRESH, {});
+            if (response.data.success && response.data.accessToken) {
+              tokenManager.setAccessToken(response.data.accessToken);
+              refetchUser();
+            }
+          } catch (error) {
+            // No valid session
+          }
+        } else {
+          // Just refetch user data to ensure it's up to date
           refetchUser();
         }
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [queryClient, refetchUser]);
+  }, [refetchUser]);
 
   // Try to refresh token on mount
   useEffect(() => {
