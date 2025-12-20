@@ -14,6 +14,7 @@ import RequestPasswordReset from './pages/RequestPasswordReset';
 import ResetPassword from './pages/ResetPassword';
 import QRLanding from './pages/QRLanding';
 import MenuCategoriesAdmin from './pages/MenuCategoriesAdmin';
+import MenuBulkOps from './pages/MenuBulkOps';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -72,6 +73,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MenuCategoriesAdmin />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/menu-bulk-ops"
+              element={
+                <ProtectedRoute>
+                  <MenuBulkOps />
                 </ProtectedRoute>
               }
             />
