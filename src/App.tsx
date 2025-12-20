@@ -8,6 +8,10 @@ import Header from './components/Header';
 import AuthModal from './components/AuthModal';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
+import Register from './pages/Register';
+import VerifyEmail from './pages/VerifyEmail';
+import RequestPasswordReset from './pages/RequestPasswordReset';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,6 +51,10 @@ function App() {
                 </div>
               }
             />
+            <Route path="/register" element={<Register />} />
+            <Route path="/verify" element={<VerifyEmail />} />
+            <Route path="/request-password-reset" element={<RequestPasswordReset />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route
               path="/dashboard"
               element={
