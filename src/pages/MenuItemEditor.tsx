@@ -21,6 +21,25 @@ interface MenuItem {
   display_order: number;
 }
 
+interface ModifierGroup {
+  id: number;
+  menu_item_id: number;
+  name: string;
+  type: 'single' | 'multiple';
+  is_required: boolean;
+  display_order: number;
+  options?: ModifierOption[];
+}
+
+interface ModifierOption {
+  id: number;
+  modifier_group_id: number;
+  name: string;
+  price_adjustment: number;
+  display_order: number;
+  is_available: boolean;
+}
+
 interface CreateMenuItemForm {
   category_id: number;
   name: string;
@@ -54,6 +73,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
   const [error, setError] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
   const [form, setForm] = useState<CreateMenuItemForm>({
     category_id: 0,
     name: '',
@@ -97,10 +117,23 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
       if (item.image_url) {
         setImagePreview(`${API_BASE_URL}${item.image_url}`);
       }
+      // Fetch modifier groups for this item
+      await fetchModifierGroups();
     } catch (err: any) {
       setError('Failed to fetch menu item');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchModifierGroups = async () => {
+    if (!itemId) return;
+
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/menu/modifiers/items/${itemId}/groups`);
+      setModifierGroups(response.data.groups);
+    } catch (err: any) {
+      console.error('Failed to fetch modifier groups:', err);
     }
   };
 
@@ -123,6 +156,87 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
         ? prev.dietary_tags.filter(t => t !== tag)
         : [...prev.dietary_tags, tag],
     }));
+  };
+
+  const handleAddModifierGroup = async (groupData: Omit<ModifierGroup, 'id' | 'menu_item_id' | 'display_order' | 'options'>) => {
+    if (!itemId) return;
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/menu/modifiers/groups`, {
+        menu_item_id: itemId,
+        ...groupData,
+        display_order: modifierGroups.length,
+      });
+      setModifierGroups(prev => [...prev, response.data]);
+    } catch (err: any) {
+      setError('Failed to add modifier group');
+    }
+  };
+
+  const handleUpdateModifierGroup = async (groupId: number, updates: Partial<ModifierGroup>) => {
+    try {
+      const response = await axios.patch(`${API_BASE_URL}/api/menu/modifiers/groups/${groupId}`, updates);
+      setModifierGroups(prev => prev.map(group =>
+        group.id === groupId ? response.data : group
+      ));
+    } catch (err: any) {
+      setError('Failed to update modifier group');
+    }
+  };
+
+  const handleDeleteModifierGroup = async (groupId: number) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/api/menu/modifiers/groups/${groupId}`);
+      setModifierGroups(prev => prev.filter(group => group.id !== groupId));
+    } catch (err: any) {
+      setError('Failed to delete modifier group');
+    }
+  };
+
+  const handleAddModifierOption = async (groupId: number, optionData: Omit<ModifierOption, 'id' | 'modifier_group_id' | 'display_order'>) => {
+    try {
+      const group = modifierGroups.find(g => g.id === groupId);
+      if (!group) return;
+
+      const response = await axios.post(`${API_BASE_URL}/api/menu/modifiers/options`, {
+        modifier_group_id: groupId,
+        ...optionData,
+        display_order: group.options?.length || 0,
+      });
+      setModifierGroups(prev => prev.map(group =>
+        group.id === groupId
+          ? { ...group, options: [...(group.options || []), response.data] }
+          : group
+      ));
+    } catch (err: any) {
+      setError('Failed to add modifier option');
+    }
+  };
+
+  const handleUpdateModifierOption = async (optionId: number, updates: Partial<ModifierOption>) => {
+    try {
+      const response = await axios.patch(`${API_BASE_URL}/api/menu/modifiers/options/${optionId}`, updates);
+      setModifierGroups(prev => prev.map(group => ({
+        ...group,
+        options: group.options?.map(option =>
+          option.id === optionId ? response.data : option
+        ),
+      })));
+    } catch (err: any) {
+      setError('Failed to update modifier option');
+    }
+  };
+
+  const handleDeleteModifierOption = async (optionId: number) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/api/menu/modifiers/options/${optionId}`);
+      setModifierGroups(prev => prev.map(group => ({
+        ...group,
+        options: group.options?.filter(option => option.id !== optionId),
+      })));
+    } catch (err: any) {
+      setError('Failed to delete modifier option');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -297,6 +411,118 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
             onChange={(e) => setForm(prev => ({ ...prev, display_order: parseInt(e.target.value) || 0 }))}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
+        </div>
+
+        {/* Modifier Groups Section */}
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <label className="block text-sm font-medium text-gray-700">
+              Modifier Groups
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                const name = prompt('Enter modifier group name:');
+                const type = confirm('Is this a multiple selection group? (Cancel for single)') ? 'multiple' : 'single';
+                const isRequired = confirm('Is this group required?');
+                if (name) {
+                  handleAddModifierGroup({ name, type, is_required: isRequired });
+                }
+              }}
+              className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+            >
+              Add Group
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {modifierGroups.map((group) => (
+              <div key={group.id} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-3">
+                  <div>
+                    <h4 className="font-medium">{group.name}</h4>
+                    <p className="text-sm text-gray-600">
+                      {group.type} • {group.is_required ? 'Required' : 'Optional'}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const name = prompt('Enter new name:', group.name);
+                        if (name) handleUpdateModifierGroup(group.id, { name });
+                      }}
+                      className="text-blue-600 text-sm hover:text-blue-800"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteModifierGroup(group.id)}
+                      className="text-red-600 text-sm hover:text-red-800"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+
+                {/* Options */}
+                <div className="mb-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">Options</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const name = prompt('Enter option name:');
+                        const priceStr = prompt('Enter price adjustment (0 for no change):', '0');
+                        const price = parseFloat(priceStr || '0');
+                        if (name && !isNaN(price)) {
+                          handleAddModifierOption(group.id, { name, price_adjustment: price, is_available: true });
+                        }
+                      }}
+                      className="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700"
+                    >
+                      Add Option
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {group.options?.map((option) => (
+                      <div key={option.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                        <div>
+                          <span className="text-sm">{option.name}</span>
+                          {option.price_adjustment !== 0 && (
+                            <span className="text-sm text-gray-600 ml-2">
+                              ({option.price_adjustment > 0 ? '+' : ''}${option.price_adjustment.toFixed(2)})
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const name = prompt('Enter new name:', option.name);
+                              if (name) handleUpdateModifierOption(option.id, { name });
+                            }}
+                            className="text-xs text-blue-600 hover:text-blue-800"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteModifierOption(option.id)}
+                            className="text-xs text-red-600 hover:text-red-800"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )) || <p className="text-sm text-gray-500">No options yet</p>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="flex gap-4">
