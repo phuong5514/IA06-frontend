@@ -12,6 +12,7 @@ import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
 import RequestPasswordReset from './pages/RequestPasswordReset';
 import ResetPassword from './pages/ResetPassword';
+import QRLanding from './pages/QRLanding';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -55,6 +56,8 @@ function App() {
             <Route path="/verify" element={<VerifyEmail />} />
             <Route path="/request-password-reset" element={<RequestPasswordReset />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/qr/:qr_token" element={<QRLanding />} />
+            <Route path="/qr" element={<QRLanding />} />
             <Route
               path="/dashboard"
               element={
