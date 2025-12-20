@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import DashboardLayout from '../components/DashboardLayout';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 interface MenuCategory {
   id: number;
@@ -41,7 +42,7 @@ export default function MenuCategoriesAdmin() {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/api/menu/categories`);
+      const response = await axios.get(`${API_BASE_URL}/menu/categories`);
       setCategories(response.data.categories);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch categories');
@@ -53,7 +54,7 @@ export default function MenuCategoriesAdmin() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post(`${API_BASE_URL}/api/menu/categories`, createForm, {
+      await axios.post(`${API_BASE_URL}/menu/categories`, createForm, {
         withCredentials: true,
       });
       setCreateForm({ name: '', description: '' });
@@ -70,7 +71,7 @@ export default function MenuCategoriesAdmin() {
 
     try {
       await axios.patch(
-        `${API_BASE_URL}/api/menu/categories/${editingId}`,
+        `${API_BASE_URL}/menu/categories/${editingId}`,
         editForm,
         { withCredentials: true }
       );
@@ -86,7 +87,7 @@ export default function MenuCategoriesAdmin() {
     if (!confirm('Are you sure you want to delete this category?')) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/api/menu/categories/${id}`, {
+      await axios.delete(`${API_BASE_URL}/menu/categories/${id}`, {
         withCredentials: true,
       });
       fetchCategories();
@@ -109,12 +110,17 @@ export default function MenuCategoriesAdmin() {
   };
 
   if (loading) {
-    return <div className="p-6">Loading categories...</div>;
+    return (
+      <DashboardLayout>
+        <div className="p-6">Loading categories...</div>
+      </DashboardLayout>
+    );
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+    <DashboardLayout>
+      <div>
+        <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Menu Categories</h1>
         <button
           onClick={() => setShowCreateForm(true)}
@@ -248,6 +254,7 @@ export default function MenuCategoriesAdmin() {
           No categories found. Create your first category to get started.
         </div>
       )}
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

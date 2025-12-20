@@ -15,6 +15,9 @@ import ResetPassword from './pages/ResetPassword';
 import QRLanding from './pages/QRLanding';
 import MenuCategoriesAdmin from './pages/MenuCategoriesAdmin';
 import MenuBulkOps from './pages/MenuBulkOps';
+import MenuCustomer from './pages/MenuCustomer';
+import MenuItemEditor from './pages/MenuItemEditor';
+import StaffManagement from './pages/StaffManagement';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -81,6 +84,30 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MenuBulkOps />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/staff-management"
+              element={
+                <ProtectedRoute>
+                  <StaffManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/menu-editor"
+              element={
+                <ProtectedRoute>
+                  <MenuItemEditor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/menu/customer"
+              element={
+                <ProtectedRoute>
+                  <MenuCustomer />
                 </ProtectedRoute>
               }
             />

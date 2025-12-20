@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import DashboardLayout from '../components/DashboardLayout';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 interface MenuCategory {
   id: number;
@@ -37,8 +38,8 @@ export default function MenuCustomer() {
       setError(null);
 
       const [categoriesResponse, itemsResponse] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/menu/categories`),
-        axios.get(`${API_BASE_URL}/api/menu/items?available_only=true`),
+        axios.get(`${API_BASE_URL}/menu/categories`),
+        axios.get(`${API_BASE_URL}/menu/items?available_only=true`),
       ]);
 
       setCategories(categoriesResponse.data.categories);
@@ -56,24 +57,28 @@ export default function MenuCustomer() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg">Loading menu...</div>
-      </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-lg">Loading menu...</div>
+        </div>
+      </DashboardLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-red-600">{error}</div>
-      </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-red-600">{error}</div>
+        </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold text-center mb-8">Our Menu</h1>
+    <DashboardLayout>
+      <div className="max-w-4xl">
+        <h1 className="text-3xl font-bold mb-8">Our Menu</h1>
 
         {categories.map(category => {
           const categoryItems = getItemsByCategory(category.id);
@@ -137,6 +142,6 @@ export default function MenuCustomer() {
           </div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import './StaffManagement.css'
+import DashboardLayout from '../components/DashboardLayout'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
 
 interface Staff {
   id: string
@@ -47,7 +48,7 @@ export default function StaffManagement() {
       setLoading(true)
       setError(null)
       const response = await axios.get(
-        `${API_BASE_URL}/api/users/staff?include_inactive=${includeInactive}`,
+        `${API_BASE_URL}/users/staff?include_inactive=${includeInactive}`,
         { withCredentials: true }
       )
       setStaff(response.data)
@@ -62,7 +63,7 @@ export default function StaffManagement() {
     e.preventDefault()
     try {
       setError(null)
-      await axios.post(`${API_BASE_URL}/api/users/staff`, createForm, {
+      await axios.post(`${API_BASE_URL}/users/staff`, createForm, {
         withCredentials: true,
       })
       setShowCreateForm(false)
@@ -80,7 +81,7 @@ export default function StaffManagement() {
     try {
       setError(null)
       await axios.patch(
-        `${API_BASE_URL}/api/users/staff/${userId}/deactivate`,
+        `${API_BASE_URL}/users/staff/${userId}/deactivate`,
         {},
         { withCredentials: true }
       )
@@ -94,7 +95,7 @@ export default function StaffManagement() {
     try {
       setError(null)
       await axios.patch(
-        `${API_BASE_URL}/api/users/staff/${userId}/activate`,
+        `${API_BASE_URL}/users/staff/${userId}/activate`,
         {},
         { withCredentials: true }
       )
@@ -119,14 +120,17 @@ export default function StaffManagement() {
 
   if (loading) {
     return (
-      <div className="staff-management">
-        <div className="loading">Loading staff...</div>
-      </div>
+      <DashboardLayout>
+        <div className="staff-management">
+          <div className="loading">Loading staff...</div>
+        </div>
+      </DashboardLayout>
     )
   }
 
   return (
-    <div className="staff-management">
+    <DashboardLayout>
+      <div className="staff-management">
       <div className="staff-header">
         <h1>Staff Management</h1>
         <div className="staff-actions">
@@ -293,6 +297,7 @@ export default function StaffManagement() {
           </tbody>
         </table>
       </div>
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Download, Upload, FileText, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import api from '../config/api';
+import DashboardLayout from '../components/DashboardLayout';
 
 interface ImportResult {
   success: boolean;
@@ -65,8 +66,9 @@ const MenuBulkOps: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <div className="mb-8">
+    <DashboardLayout>
+      <div className="max-w-4xl">
+        <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Menu Bulk Operations</h1>
         <p className="text-gray-600">Import and export menu data in CSV format</p>
       </div>
@@ -236,7 +238,8 @@ const MenuBulkOps: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 

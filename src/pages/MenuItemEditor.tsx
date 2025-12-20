@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import DashboardLayout from '../components/DashboardLayout';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 interface MenuCategory {
   id: number;
@@ -94,7 +95,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/menu/categories`);
+      const response = await axios.get(`${API_BASE_URL}/menu/categories`);
       setCategories(response.data.categories);
     } catch (err: any) {
       setError('Failed to fetch categories');
@@ -106,7 +107,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/api/menu/items/${itemId}`);
+      const response = await axios.get(`${API_BASE_URL}/menu/items/${itemId}`);
       const item: MenuItem = response.data;
       setForm({
         category_id: item.category_id,
@@ -133,7 +134,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
     if (!itemId) return;
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/menu/modifiers/items/${itemId}/groups`);
+      const response = await axios.get(`${API_BASE_URL}/menu/modifiers/items/${itemId}/groups`);
       setModifierGroups(response.data.groups);
     } catch (err: any) {
       console.error('Failed to fetch modifier groups:', err);
@@ -165,7 +166,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
     if (!itemId) return;
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/menu/modifiers/groups`, {
+      const response = await axios.post(`${API_BASE_URL}/menu/modifiers/groups`, {
         menu_item_id: itemId,
         ...groupData,
         display_order: modifierGroups.length,
@@ -178,7 +179,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
   const handleUpdateModifierGroup = async (groupId: number, updates: Partial<ModifierGroup>) => {
     try {
-      const response = await axios.patch(`${API_BASE_URL}/api/menu/modifiers/groups/${groupId}`, updates);
+      const response = await axios.patch(`${API_BASE_URL}/menu/modifiers/groups/${groupId}`, updates);
       setModifierGroups(prev => prev.map(group =>
         group.id === groupId ? response.data : group
       ));
@@ -189,7 +190,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
   const handleDeleteModifierGroup = async (groupId: number) => {
     try {
-      await axios.delete(`${API_BASE_URL}/api/menu/modifiers/groups/${groupId}`);
+      await axios.delete(`${API_BASE_URL}/menu/modifiers/groups/${groupId}`);
       setModifierGroups(prev => prev.filter(group => group.id !== groupId));
     } catch (err: any) {
       setError('Failed to delete modifier group');
@@ -201,7 +202,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
       const group = modifierGroups.find(g => g.id === groupId);
       if (!group) return;
 
-      const response = await axios.post(`${API_BASE_URL}/api/menu/modifiers/options`, {
+      const response = await axios.post(`${API_BASE_URL}/menu/modifiers/options`, {
         modifier_group_id: groupId,
         ...optionData,
         display_order: group.options?.length || 0,
@@ -218,7 +219,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
   const handleUpdateModifierOption = async (optionId: number, updates: Partial<ModifierOption>) => {
     try {
-      const response = await axios.patch(`${API_BASE_URL}/api/menu/modifiers/options/${optionId}`, updates);
+      const response = await axios.patch(`${API_BASE_URL}/menu/modifiers/options/${optionId}`, updates);
       setModifierGroups(prev => prev.map(group => ({
         ...group,
         options: group.options?.map(option =>
@@ -232,7 +233,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
   const handleDeleteModifierOption = async (optionId: number) => {
     try {
-      await axios.delete(`${API_BASE_URL}/api/menu/modifiers/options/${optionId}`);
+      await axios.delete(`${API_BASE_URL}/menu/modifiers/options/${optionId}`);
       setModifierGroups(prev => prev.map(group => ({
         ...group,
         options: group.options?.filter(option => option.id !== optionId),
@@ -262,9 +263,9 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
       let itemIdToUse = itemId;
 
       if (itemId) {
-        await axios.put(`${API_BASE_URL}/api/menu/items/${itemId}`, submitData);
+        await axios.put(`${API_BASE_URL}/menu/items/${itemId}`, submitData);
       } else {
-        const response = await axios.post(`${API_BASE_URL}/api/menu/items`, submitData);
+        const response = await axios.post(`${API_BASE_URL}/menu/items`, submitData);
         itemIdToUse = response.data.id;
       }
 
@@ -272,7 +273,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
       if (imageFile && itemIdToUse) {
         const formData = new FormData();
         formData.append('image', imageFile);
-        await axios.post(`${API_BASE_URL}/api/menu/items/${itemIdToUse}/image`, formData, {
+        await axios.post(`${API_BASE_URL}/menu/items/${itemIdToUse}/image`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
@@ -288,12 +289,17 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
   };
 
   if (loading) {
-    return <div className="p-4">Loading...</div>;
+    return (
+      <DashboardLayout>
+        <div className="p-4">Loading...</div>
+      </DashboardLayout>
+    );
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6">
+    <DashboardLayout>
+      <div className="max-w-2xl">
+        <h2 className="text-2xl font-bold mb-6">
         {itemId ? 'Edit Menu Item' : 'Create Menu Item'}
       </h2>
 
@@ -559,6 +565,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
           )}
         </div>
       </form>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
