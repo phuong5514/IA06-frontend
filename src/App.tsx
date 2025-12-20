@@ -13,6 +13,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import RequestPasswordReset from './pages/RequestPasswordReset';
 import ResetPassword from './pages/ResetPassword';
 import QRLanding from './pages/QRLanding';
+import MenuCategoriesAdmin from './pages/MenuCategoriesAdmin';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -63,6 +64,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/menu-categories"
+              element={
+                <ProtectedRoute>
+                  <MenuCategoriesAdmin />
                 </ProtectedRoute>
               }
             />
