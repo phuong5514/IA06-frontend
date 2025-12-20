@@ -47,6 +47,7 @@ interface CreateMenuItemForm {
   price: number;
   dietary_tags: string[];
   display_order: number;
+  is_available: boolean;
 }
 
 const DIETARY_TAGS = [
@@ -81,6 +82,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
     price: 0,
     dietary_tags: [],
     display_order: 0,
+    is_available: true,
   });
 
   useEffect(() => {
@@ -113,6 +115,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
         price: item.price,
         dietary_tags: item.dietary_tags || [],
         display_order: item.display_order,
+        is_available: item.is_available,
       });
       if (item.image_url) {
         setImagePreview(`${API_BASE_URL}${item.image_url}`);
@@ -398,6 +401,18 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
               </label>
             ))}
           </div>
+        </div>
+
+        <div>
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={form.is_available}
+              onChange={(e) => setForm(prev => ({ ...prev, is_available: e.target.checked }))}
+              className="mr-2"
+            />
+            <span className="text-sm font-medium text-gray-700">Available</span>
+          </label>
         </div>
 
         <div>
