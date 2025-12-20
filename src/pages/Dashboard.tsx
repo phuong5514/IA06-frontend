@@ -63,7 +63,7 @@ export default function Dashboard() {
               </p>
             </div>
 
-            {user?.role === 'admin' && (
+            {(user?.role === 'admin' || user?.role === 'super_admin') && (
               <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-indigo-800 mb-4">
                   🛠️ Restaurant Management

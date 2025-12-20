@@ -33,7 +33,7 @@ export default function Navigation() {
         Customer Menu
       </Link>
 
-      {user?.role === 'admin' && (
+      {(user?.role === 'admin' || user?.role === 'super_admin') && (
         <>
           <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
             Admin

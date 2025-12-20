@@ -63,7 +63,7 @@ function Home({ onOpenSignIn, onOpenSignUp }: HomeProps) {
             >
               Browse Menu
             </button>
-            {user && (user as User).role === 'admin' && (
+            {user && ((user as User).role === 'admin' || (user as User).role === 'super_admin') && (
               <button
                 onClick={() => navigate('/dashboard')}
                 className="px-8 py-3 bg-purple-600 text-white font-semibold rounded-lg shadow-lg hover:bg-purple-700 transition duration-300 transform hover:scale-105"
