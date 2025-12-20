@@ -7,7 +7,10 @@ import { tabSyncManager } from '../utils/tabSync';
 interface User {
   email: string;
   id?: number;
+  role?: string;
 }
+
+export type { User };
 
 interface AuthContextType {
   user: User | null;

@@ -16,7 +16,9 @@ import QRLanding from './pages/QRLanding';
 import MenuCategoriesAdmin from './pages/MenuCategoriesAdmin';
 import MenuBulkOps from './pages/MenuBulkOps';
 import MenuCustomer from './pages/MenuCustomer';
+import GuestMenu from './pages/GuestMenu';
 import MenuItemEditor from './pages/MenuItemEditor';
+import MenuItemsManagement from './pages/MenuItemsManagement';
 import StaffManagement from './pages/StaffManagement';
 
 function App() {
@@ -96,6 +98,14 @@ function App() {
               }
             />
             <Route
+              path="/admin/menu-items"
+              element={
+                <ProtectedRoute>
+                  <MenuItemsManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/menu-editor"
               element={
                 <ProtectedRoute>
@@ -111,6 +121,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/menu" element={<GuestMenu />} />
           </Routes>
         </AuthProvider>
       </BrowserRouter>

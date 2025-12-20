@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -299,6 +300,48 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
   return (
     <DashboardLayout>
       <div className="max-w-2xl">
+        {/* Breadcrumb Navigation */}
+        <div className="mb-6">
+          <nav className="flex" aria-label="Breadcrumb">
+            <ol className="inline-flex items-center space-x-1 md:space-x-3">
+              <li className="inline-flex items-center">
+                <Link
+                  to="/dashboard"
+                  className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-indigo-600"
+                >
+                  <svg className="w-3 h-3 mr-2.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="m19.707 9.293-2-2-7-7a1 1 0 0 0-1.414 0l-7 7-2 2A1 1 0 0 0 1 10h2v8a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-8h2a1 1 0 0 0 .707-1.707Z"/>
+                  </svg>
+                  Dashboard
+                </Link>
+              </li>
+              <li>
+                <div className="flex items-center">
+                  <svg className="w-3 h-3 text-gray-400 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m9 5 7 7-7 7"/>
+                  </svg>
+                  <Link
+                    to="/admin/menu-items"
+                    className="ml-1 text-sm font-medium text-gray-700 hover:text-indigo-600 md:ml-2"
+                  >
+                    Menu Items
+                  </Link>
+                </div>
+              </li>
+              <li aria-current="page">
+                <div className="flex items-center">
+                  <svg className="w-3 h-3 text-gray-400 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m9 5 7 7-7 7"/>
+                  </svg>
+                  <span className="ml-1 text-sm font-medium text-gray-500 md:ml-2">
+                    {itemId ? 'Edit Item' : 'Create Item'}
+                  </span>
+                </div>
+              </li>
+            </ol>
+          </nav>
+        </div>
+
         <h2 className="text-2xl font-bold mb-6">
         {itemId ? 'Edit Menu Item' : 'Create Menu Item'}
       </h2>

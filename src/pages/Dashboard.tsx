@@ -2,9 +2,11 @@ import { useAuth } from '../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../config/api';
 import DashboardLayout from '../components/DashboardLayout';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Example protected data query
   const { data: profileData, isLoading } = useQuery({
@@ -14,6 +16,18 @@ export default function Dashboard() {
       return response.data;
     },
   });
+
+  const handleMenuManagement = () => {
+    navigate('/admin/menu-items');
+  };
+
+  const handleCategoryManagement = () => {
+    navigate('/admin/menu-categories');
+  };
+
+  const handleBulkOperations = () => {
+    navigate('/admin/menu-bulk-ops');
+  };
 
   return (
     <DashboardLayout>
@@ -48,6 +62,37 @@ export default function Dashboard() {
                 You are viewing a protected route. This page is only accessible to authenticated users.
               </p>
             </div>
+
+            {user?.role === 'admin' && (
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-indigo-800 mb-4">
+                  🛠️ Restaurant Management
+                </h3>
+                <p className="text-indigo-700 mb-4">
+                  As an administrator, you can manage your restaurant's menu, categories, and operations.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <button
+                    onClick={handleMenuManagement}
+                    className="bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                  >
+                    📋 Manage Menu Items
+                  </button>
+                  <button
+                    onClick={handleCategoryManagement}
+                    className="bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                  >
+                    📂 Manage Categories
+                  </button>
+                  <button
+                    onClick={handleBulkOperations}
+                    className="bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                  >
+                    📊 Bulk Operations
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-blue-800 mb-2">

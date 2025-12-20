@@ -33,6 +33,11 @@ function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
     setIsMenuOpen(false);
   };
 
+  const goToMenu = () => {
+    navigate('/menu');
+    setIsMenuOpen(false);
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm shadow-md z-50">
       <div className="container mx-auto px-4">
@@ -43,12 +48,18 @@ function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
               onClick={goToHome}
               className="text-2xl font-bold text-indigo-600 cursor-pointer"
             >
-              MyApp
+              Smart Restaurant
             </h1>
           </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-4">
+            <button
+              onClick={goToMenu}
+              className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+            >
+              Menu
+            </button>
             {!isAuthenticated ? (
               <>
                 <button
@@ -117,6 +128,12 @@ function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden border-t border-gray-200 py-4 space-y-2">
+            <button
+              onClick={goToMenu}
+              className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+            >
+              Menu
+            </button>
             {!isAuthenticated ? (
               <>
                 <button
