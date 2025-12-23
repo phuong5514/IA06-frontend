@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -73,40 +72,7 @@ export default function GuestMenu() {
   const filteredItems = getFilteredItems();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50">
-      {/* Header */}
-      <header className="bg-white shadow-md sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-indigo-600">Smart Restaurant</h1>
-              <span className="text-sm text-gray-500">Menu</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/"
-                className="text-sm text-gray-600 hover:text-indigo-600 transition-colors"
-              >
-                Home
-              </Link>
-              <Link
-                to="/dashboard"
-                className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                Sign In
-              </Link>
-              {/* Admin quick access - you can add auth check here if needed */}
-              <Link
-                to="/dashboard"
-                className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                Admin Panel
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 pt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero Section */}
         <div className="text-center mb-10">

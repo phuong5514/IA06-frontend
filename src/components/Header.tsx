@@ -1,17 +1,21 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logo from '../assets/logo.png';
+
 
 type HeaderProps = {
-  onOpenSignIn: () => void;
-  onOpenSignUp: () => void;
+  onOpenSignIn?: () => void;
+  onOpenSignUp?: () => void;
+  showAuthButtons?: boolean;
 }
 
 
-function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
+function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
     try {
@@ -38,13 +42,25 @@ function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
     setIsMenuOpen(false);
   };
 
+  // Don't show header on dashboard pages (they have their own layout) or home page (uses layered navigation)
+  if (location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/admin/') || location.pathname === '/') {
+    return null;
+  }
+
   return (
     <header className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm shadow-md z-50">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-16"
+            >
           {/* Logo */}
-          <div className="flex-shrink-0">
-            <h1 
+          <div className="flex-shrink-0 flex items-center gap-2">
+            <img
+              src={logo}
+              alt="Smart Restaurant Logo"
+              className="h-10 w-10 cursor-pointer"
+              onClick={goToHome}
+            />
+            <h1
               onClick={goToHome}
               className="text-2xl font-bold text-indigo-600 cursor-pointer"
             >
@@ -60,7 +76,7 @@ function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
             >
               Menu
             </button>
-            {!isAuthenticated ? (
+            {!isAuthenticated && showAuthButtons ? (
               <>
                 <button
                   onClick={onOpenSignIn}
@@ -75,7 +91,7 @@ function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
                   Sign Up
                 </button>
               </>
-            ) : (
+            ) : isAuthenticated ? (
               <>
                 <button
                   onClick={goToDashboard}
@@ -91,7 +107,7 @@ function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
                   Sign Out
                 </button>
               </>
-            )}
+            ) : null}
           </nav>
 
           {/* Mobile Burger Menu Button */}
@@ -134,11 +150,11 @@ function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
             >
               Menu
             </button>
-            {!isAuthenticated ? (
+            {!isAuthenticated && showAuthButtons ? (
               <>
                 <button
                   onClick={() => {
-                    onOpenSignIn();
+                    onOpenSignIn?.();
                     setIsMenuOpen(false);
                   }}
                   className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
@@ -147,7 +163,7 @@ function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
                 </button>
                 <button
                   onClick={() => {
-                    onOpenSignUp();
+                    onOpenSignUp?.();
                     setIsMenuOpen(false);
                   }}
                   className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
@@ -155,7 +171,7 @@ function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
                   Sign Up
                 </button>
               </>
-            ) : (
+            ) : isAuthenticated ? (
               <>
                 <button
                   onClick={goToDashboard}
@@ -173,7 +189,7 @@ function Header({ onOpenSignIn, onOpenSignUp }: HeaderProps) {
                   Sign Out
                 </button>
               </>
-            )}
+            ) : null}
           </div>
         )}
       </div>

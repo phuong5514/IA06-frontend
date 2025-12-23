@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+import { apiClient } from '../config/api';
 
 interface TableInfo {
   table_id: number;
@@ -30,8 +28,8 @@ export default function QRLanding() {
       }
 
       try {
-        const response = await axios.get<TableInfo>(
-          `${API_BASE_URL}/tables/verify/${token}`
+        const response = await apiClient.get<TableInfo>(
+          `/tables/verify/${token}`
         );
 
         setTableInfo(response.data);
@@ -57,7 +55,7 @@ export default function QRLanding() {
   }, [qr_token, searchParams, navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 py-20">
       <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
         {loading && (
           <div className="text-center">

@@ -43,12 +43,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
+          <Header onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
           <Routes>
             <Route
               path="/"
               element={
                 <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
-                  <Header onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
                   <Home onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
                   <AuthModal
                     isOpen={isModalOpen}
@@ -76,7 +76,7 @@ function App() {
             <Route
               path="/admin/menu-categories"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
                   <MenuCategoriesAdmin />
                 </ProtectedRoute>
               }
@@ -84,7 +84,7 @@ function App() {
             <Route
               path="/admin/menu-bulk-ops"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
                   <MenuBulkOps />
                 </ProtectedRoute>
               }
@@ -92,7 +92,7 @@ function App() {
             <Route
               path="/admin/staff-management"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
                   <StaffManagement />
                 </ProtectedRoute>
               }
@@ -100,7 +100,7 @@ function App() {
             <Route
               path="/admin/menu-items"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
                   <MenuItemsManagement />
                 </ProtectedRoute>
               }
@@ -108,7 +108,7 @@ function App() {
             <Route
               path="/admin/menu-editor"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
                   <MenuItemEditor />
                 </ProtectedRoute>
               }

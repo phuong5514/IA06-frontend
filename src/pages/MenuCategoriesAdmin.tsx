@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { apiClient } from '../config/api';
 import DashboardLayout from '../components/DashboardLayout';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 interface MenuCategory {
   id: number;
@@ -42,7 +40,7 @@ export default function MenuCategoriesAdmin() {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/menu/categories`);
+      const response = await apiClient.get('/menu/categories');
       setCategories(response.data.categories);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch categories');
@@ -54,9 +52,7 @@ export default function MenuCategoriesAdmin() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post(`${API_BASE_URL}/menu/categories`, createForm, {
-        withCredentials: true,
-      });
+      await apiClient.post('/menu/categories', createForm);
       setCreateForm({ name: '', description: '' });
       setShowCreateForm(false);
       fetchCategories();
@@ -70,10 +66,9 @@ export default function MenuCategoriesAdmin() {
     if (!editingId) return;
 
     try {
-      await axios.patch(
-        `${API_BASE_URL}/menu/categories/${editingId}`,
-        editForm,
-        { withCredentials: true }
+      await apiClient.patch(
+        `/menu/categories/${editingId}`,
+        editForm
       );
       setEditingId(null);
       setEditForm({ name: '', description: '' });
@@ -87,9 +82,7 @@ export default function MenuCategoriesAdmin() {
     if (!confirm('Are you sure you want to delete this category?')) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/menu/categories/${id}`, {
-        withCredentials: true,
-      });
+      await apiClient.delete(`/menu/categories/${id}`);
       fetchCategories();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to delete category');

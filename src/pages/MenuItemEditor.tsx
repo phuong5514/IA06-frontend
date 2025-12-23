@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { apiClient } from '../config/api';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 interface MenuCategory {
   id: number;
@@ -96,7 +94,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/menu/categories`);
+      const response = await apiClient.get('/menu/categories');
       setCategories(response.data.categories);
     } catch (err: any) {
       setError('Failed to fetch categories');
@@ -108,7 +106,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/menu/items/${itemId}`);
+      const response = await apiClient.get(`/menu/items/${itemId}`);
       const item: MenuItem = response.data;
       setForm({
         category_id: item.category_id,
@@ -120,7 +118,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
         is_available: item.is_available,
       });
       if (item.image_url) {
-        setImagePreview(`${API_BASE_URL}${item.image_url}`);
+        setImagePreview(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${item.image_url}`);
       }
       // Fetch modifier groups for this item
       await fetchModifierGroups();
@@ -135,7 +133,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
     if (!itemId) return;
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/menu/modifiers/items/${itemId}/groups`);
+      const response = await apiClient.get(`/menu/modifiers/items/${itemId}/groups`);
       setModifierGroups(response.data.groups);
     } catch (err: any) {
       console.error('Failed to fetch modifier groups:', err);
@@ -167,7 +165,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
     if (!itemId) return;
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/menu/modifiers/groups`, {
+      const response = await apiClient.post('/menu/modifiers/groups', {
         menu_item_id: itemId,
         ...groupData,
         display_order: modifierGroups.length,
@@ -180,7 +178,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
   const handleUpdateModifierGroup = async (groupId: number, updates: Partial<ModifierGroup>) => {
     try {
-      const response = await axios.patch(`${API_BASE_URL}/menu/modifiers/groups/${groupId}`, updates);
+      const response = await apiClient.patch(`/menu/modifiers/groups/${groupId}`, updates);
       setModifierGroups(prev => prev.map(group =>
         group.id === groupId ? response.data : group
       ));
@@ -191,7 +189,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
   const handleDeleteModifierGroup = async (groupId: number) => {
     try {
-      await axios.delete(`${API_BASE_URL}/menu/modifiers/groups/${groupId}`);
+      await apiClient.delete(`/menu/modifiers/groups/${groupId}`);
       setModifierGroups(prev => prev.filter(group => group.id !== groupId));
     } catch (err: any) {
       setError('Failed to delete modifier group');
@@ -203,7 +201,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
       const group = modifierGroups.find(g => g.id === groupId);
       if (!group) return;
 
-      const response = await axios.post(`${API_BASE_URL}/menu/modifiers/options`, {
+      const response = await apiClient.post('/menu/modifiers/options', {
         modifier_group_id: groupId,
         ...optionData,
         display_order: group.options?.length || 0,
@@ -220,7 +218,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
   const handleUpdateModifierOption = async (optionId: number, updates: Partial<ModifierOption>) => {
     try {
-      const response = await axios.patch(`${API_BASE_URL}/menu/modifiers/options/${optionId}`, updates);
+      const response = await apiClient.patch(`/menu/modifiers/options/${optionId}`, updates);
       setModifierGroups(prev => prev.map(group => ({
         ...group,
         options: group.options?.map(option =>
@@ -234,7 +232,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
   const handleDeleteModifierOption = async (optionId: number) => {
     try {
-      await axios.delete(`${API_BASE_URL}/menu/modifiers/options/${optionId}`);
+      await apiClient.delete(`/menu/modifiers/options/${optionId}`);
       setModifierGroups(prev => prev.map(group => ({
         ...group,
         options: group.options?.filter(option => option.id !== optionId),
@@ -264,9 +262,9 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
       let itemIdToUse = itemId;
 
       if (itemId) {
-        await axios.put(`${API_BASE_URL}/menu/items/${itemId}`, submitData);
+        await apiClient.put(`/menu/items/${itemId}`, submitData);
       } else {
-        const response = await axios.post(`${API_BASE_URL}/menu/items`, submitData);
+        const response = await apiClient.post('/menu/items', submitData);
         itemIdToUse = response.data.id;
       }
 
@@ -274,7 +272,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
       if (imageFile && itemIdToUse) {
         const formData = new FormData();
         formData.append('image', imageFile);
-        await axios.post(`${API_BASE_URL}/menu/items/${itemIdToUse}/image`, formData, {
+        await apiClient.post(`/menu/items/${itemIdToUse}/image`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },

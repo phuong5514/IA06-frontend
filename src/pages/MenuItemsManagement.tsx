@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { apiClient } from '../config/api';
 import { useNavigate, Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 interface MenuCategory {
   id: number;
@@ -45,8 +43,8 @@ export default function MenuItemsManagement() {
       setError(null);
 
       const [categoriesResponse, itemsResponse] = await Promise.all([
-        axios.get(`${API_BASE_URL}/menu/categories`),
-        axios.get(`${API_BASE_URL}/menu/items`, {
+        apiClient.get('/menu/categories'),
+        apiClient.get('/menu/items', {
           params: {
             category_id: selectedCategory || undefined,
             available_only: !showUnavailable,
@@ -65,7 +63,7 @@ export default function MenuItemsManagement() {
 
   const handleToggleAvailability = async (itemId: number, currentStatus: boolean) => {
     try {
-      await axios.put(`${API_BASE_URL}/menu/items/${itemId}`, {
+      await apiClient.put(`/menu/items/${itemId}`, {
         is_available: !currentStatus,
       });
       fetchData();
@@ -80,7 +78,7 @@ export default function MenuItemsManagement() {
     }
 
     try {
-      await axios.delete(`${API_BASE_URL}/menu/items/${itemId}`);
+      await apiClient.delete(`/menu/items/${itemId}`);
       fetchData();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to delete item');

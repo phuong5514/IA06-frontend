@@ -54,14 +54,14 @@ export default function Dashboard() {
               )}
             </div>
 
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            {/* <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-green-800 mb-2">
                 ✓ Authentication Successful
               </h3>
               <p className="text-green-700">
                 You are viewing a protected route. This page is only accessible to authenticated users.
               </p>
-            </div>
+            </div> */}
 
             {(user?.role === 'admin' || user?.role === 'super_admin') && (
               <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
@@ -94,7 +94,7 @@ export default function Dashboard() {
               </div>
             )}
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            {/* <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-blue-800 mb-2">
                 Token Management
               </h3>
@@ -116,7 +116,7 @@ export default function Dashboard() {
                 <li>Automatic query refetching</li>
                 <li>Optimistic updates and caching</li>
               </ul>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

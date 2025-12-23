@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import { apiClient } from '../config/api'
+import { useAuth } from '../context/AuthContext'
 import './StaffManagement.css'
 import DashboardLayout from '../components/DashboardLayout'
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
 
 interface Staff {
   id: string
@@ -26,6 +25,7 @@ interface CreateStaffForm {
 }
 
 export default function StaffManagement() {
+  const { user } = useAuth()
   const [staff, setStaff] = useState<Staff[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -47,9 +47,8 @@ export default function StaffManagement() {
     try {
       setLoading(true)
       setError(null)
-      const response = await axios.get(
-        `${API_BASE_URL}/users/staff?include_inactive=${includeInactive}`,
-        { withCredentials: true }
+      const response = await apiClient.get(
+        `/users/staff?include_inactive=${includeInactive}`
       )
       setStaff(response.data)
     } catch (err: any) {
@@ -63,9 +62,7 @@ export default function StaffManagement() {
     e.preventDefault()
     try {
       setError(null)
-      await axios.post(`${API_BASE_URL}/users/staff`, createForm, {
-        withCredentials: true,
-      })
+      await apiClient.post(`/users/staff`, createForm)
       setShowCreateForm(false)
       setCreateForm({ email: '', password: '', name: '', phone: '', role: 'waiter' })
       fetchStaff()
@@ -80,10 +77,8 @@ export default function StaffManagement() {
     }
     try {
       setError(null)
-      await axios.patch(
-        `${API_BASE_URL}/users/staff/${userId}/deactivate`,
-        {},
-        { withCredentials: true }
+      await apiClient.patch(
+        `/users/staff/${userId}/deactivate`
       )
       fetchStaff()
     } catch (err: any) {
@@ -94,10 +89,8 @@ export default function StaffManagement() {
   const handleActivate = async (userId: string) => {
     try {
       setError(null)
-      await axios.patch(
-        `${API_BASE_URL}/users/staff/${userId}/activate`,
-        {},
-        { withCredentials: true }
+      await apiClient.patch(
+        `/users/staff/${userId}/activate`
       )
       fetchStaff()
     } catch (err: any) {
@@ -220,7 +213,9 @@ export default function StaffManagement() {
                 >
                   <option value="waiter">Waiter</option>
                   <option value="kitchen">Kitchen</option>
-                  <option value="admin">Admin</option>
+                  {user?.role === 'super_admin' && (
+                    <option value="admin">Admin</option>
+                  )}
                 </select>
               </div>
 
