@@ -287,7 +287,7 @@ export default function GuestMenu() {
                       {/* Price and Action */}
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                         <span className="text-2xl font-bold text-indigo-600">
-                          ${item.price.toFixed(2)}
+                          ${parseFloat(item.price).toFixed(2)}
                         </span>
                         <button className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
                           Order

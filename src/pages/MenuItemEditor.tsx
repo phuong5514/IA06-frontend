@@ -555,7 +555,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
                           <span className="text-sm">{option.name}</span>
                           {option.price_adjustment !== 0 && (
                             <span className="text-sm text-gray-600 ml-2">
-                              ({option.price_adjustment > 0 ? '+' : ''}${option.price_adjustment.toFixed(2)})
+                              ({option.price_adjustment > 0 ? '+' : ''}${parseFloat(option.price_adjustment).toFixed(2)})
                             </span>
                           )}
                         </div>

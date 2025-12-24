@@ -256,7 +256,7 @@ export default function MenuItemsManagement() {
 
                   {/* Price */}
                   <p className="text-xl font-bold text-indigo-600 mb-3">
-                    ${item.price.toFixed(2)}
+                    ${parseFloat(item.price).toFixed(2)}
                   </p>
 
                   {/* Dietary Tags */}

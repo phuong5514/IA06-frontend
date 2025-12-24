@@ -110,7 +110,7 @@ export default function MenuCustomer() {
                       )}
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-lg font-bold text-green-600">
-                          ${item.price.toFixed(2)}
+                          ${parseFloat(item.price).toFixed(2)}
                         </span>
                       </div>
                       {item.dietary_tags && item.dietary_tags.length > 0 && (

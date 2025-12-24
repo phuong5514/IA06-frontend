@@ -81,7 +81,7 @@ export default function ModifierSelector({ itemId, onSelectionChange, selectedMo
         optionIds.forEach(optionId => {
           const option = group.options.find(o => o.id === optionId);
           if (option) {
-            total += option.price_adjustment;
+            total += parseFloat(option.price_adjustment);
           }
         });
       }
@@ -176,7 +176,7 @@ export default function ModifierSelector({ itemId, onSelectionChange, selectedMo
                           <span className={`font-medium ${
                             option.price_adjustment > 0 ? 'text-green-600' : 'text-red-600'
                           }`}>
-                            {option.price_adjustment > 0 ? '+' : ''}${option.price_adjustment.toFixed(2)}
+                            {option.price_adjustment > 0 ? '+' : ''}${parseFloat(option.price_adjustment).toFixed(2)}
                           </span>
                         )}
                       </label>
