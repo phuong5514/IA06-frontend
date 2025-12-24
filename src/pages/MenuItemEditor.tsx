@@ -14,7 +14,7 @@ interface MenuItem {
   category_id: number;
   name: string;
   description?: string;
-  price: number;
+  price: string;
   image_url?: string;
   dietary_tags: string[];
   is_available: boolean;
@@ -35,7 +35,7 @@ interface ModifierOption {
   id: number;
   modifier_group_id: number;
   name: string;
-  price_adjustment: number;
+  price_adjustment: string;
   display_order: number;
   is_available: boolean;
 }
@@ -44,7 +44,7 @@ interface CreateMenuItemForm {
   category_id: number;
   name: string;
   description: string;
-  price: number;
+  price: string;
   dietary_tags: string[];
   display_order: number;
   is_available: boolean;
@@ -80,11 +80,26 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
+  const [showModifierGroupModal, setShowModifierGroupModal] = useState(false);
+  const [editingModifierGroup, setEditingModifierGroup] = useState<ModifierGroup | null>(null);
+  const [showModifierOptionModal, setShowModifierOptionModal] = useState(false);
+  const [editingModifierOption, setEditingModifierOption] = useState<ModifierOption | null>(null);
+  const [currentGroupForOption, setCurrentGroupForOption] = useState<number | null>(null);
+  const [modifierGroupForm, setModifierGroupForm] = useState({
+    name: '',
+    type: 'single' as 'single' | 'multiple',
+    is_required: false,
+  });
+  const [modifierOptionForm, setModifierOptionForm] = useState({
+    name: '',
+    price_adjustment: '0',
+    is_available: true,
+  });
   const [form, setForm] = useState<CreateMenuItemForm>({
     category_id: 0,
     name: '',
     description: '',
-    price: 0,
+    price: '0',
     dietary_tags: [],
     display_order: 0,
     is_available: true,
@@ -167,17 +182,30 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
   };
 
   const handleAddModifierGroup = async (groupData: Omit<ModifierGroup, 'id' | 'menu_item_id' | 'display_order' | 'options'>) => {
-    if (!currentItemId) return;
-
-    try {
-      const response = await apiClient.post('/menu/modifiers/groups', {
-        menu_item_id: currentItemId,
-        ...groupData,
+    if (currentItemId) {
+      // For existing items, create on server immediately
+      try {
+        const response = await apiClient.post('/menu/modifiers/groups', {
+          menu_item_id: currentItemId,
+          ...groupData,
+          display_order: modifierGroups.length,
+        });
+        setModifierGroups(prev => [...prev, response.data]);
+      } catch (err: any) {
+        setError('Failed to add modifier group');
+      }
+    } else {
+      // For new items, just add to local state - will be created when item is saved
+      const newGroup: ModifierGroup = {
+        id: Date.now(), // Temporary ID for UI purposes
+        menu_item_id: 0, // Will be set when item is created
+        name: groupData.name,
+        type: groupData.type,
+        is_required: groupData.is_required,
         display_order: modifierGroups.length,
-      });
-      setModifierGroups(prev => [...prev, response.data]);
-    } catch (err: any) {
-      setError('Failed to add modifier group');
+        options: [],
+      };
+      setModifierGroups(prev => [...prev, newGroup]);
     }
   };
 
@@ -206,21 +234,109 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
       const group = modifierGroups.find(g => g.id === groupId);
       if (!group) return;
 
-      const response = await apiClient.post('/menu/modifiers/options', {
-        modifier_group_id: groupId,
-        ...optionData,
-        display_order: group.options?.length || 0,
-      });
-      setModifierGroups(prev => prev.map(group =>
-        group.id === groupId
-          ? { ...group, options: [...(group.options || []), response.data] }
-          : group
-      ));
+      if (currentItemId && group.menu_item_id > 0) {
+        // For existing items with real server IDs, create on server
+        const response = await apiClient.post('/menu/modifiers/options', {
+          modifier_group_id: groupId,
+          ...optionData,
+          display_order: group.options?.length || 0,
+        });
+        setModifierGroups(prev => prev.map(group =>
+          group.id === groupId
+            ? { ...group, options: [...(group.options || []), response.data] }
+            : group
+        ));
+      } else {
+        // For new items, add to local state only
+        const newOption: ModifierOption = {
+          id: Date.now(), // Temporary ID
+          modifier_group_id: groupId,
+          name: optionData.name,
+          price_adjustment: optionData.price_adjustment,
+          display_order: group.options?.length || 0,
+          is_available: optionData.is_available,
+        };
+        setModifierGroups(prev => prev.map(group =>
+          group.id === groupId
+            ? { ...group, options: [...(group.options || []), newOption] }
+            : group
+        ));
+      }
     } catch (err: any) {
       setError('Failed to add modifier option');
     }
   };
+  const openModifierGroupModal = (group?: ModifierGroup) => {
+    if (group) {
+      setEditingModifierGroup(group);
+      setModifierGroupForm({
+        name: group.name,
+        type: group.type,
+        is_required: group.is_required,
+      });
+    } else {
+      setEditingModifierGroup(null);
+      setModifierGroupForm({
+        name: '',
+        type: 'single',
+        is_required: false,
+      });
+    }
+    setShowModifierGroupModal(true);
+  };
 
+  const closeModifierGroupModal = () => {
+    setShowModifierGroupModal(false);
+    setEditingModifierGroup(null);
+  };
+
+  const handleModifierGroupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingModifierGroup) {
+      await handleUpdateModifierGroup(editingModifierGroup.id, modifierGroupForm);
+    } else {
+      await handleAddModifierGroup(modifierGroupForm);
+    }
+    closeModifierGroupModal();
+  };
+
+  const openModifierOptionModal = (groupId: number, option?: ModifierOption) => {
+    setCurrentGroupForOption(groupId);
+    if (option) {
+      setEditingModifierOption(option);
+      setModifierOptionForm({
+        name: option.name,
+        price_adjustment: option.price_adjustment,
+        is_available: option.is_available,
+      });
+    } else {
+      setEditingModifierOption(null);
+      setModifierOptionForm({
+        name: '',
+        price_adjustment: '0',
+        is_available: true,
+      });
+    }
+    setShowModifierOptionModal(true);
+  };
+
+  const closeModifierOptionModal = () => {
+    setShowModifierOptionModal(false);
+    setEditingModifierOption(null);
+    setCurrentGroupForOption(null);
+  };
+
+  const handleModifierOptionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentGroupForOption) return;
+
+    if (editingModifierOption) {
+      await handleUpdateModifierOption(editingModifierOption.id, modifierOptionForm);
+    } else {
+      await handleAddModifierOption(currentGroupForOption, modifierOptionForm);
+    }
+    closeModifierOptionModal();
+  };
   const handleUpdateModifierOption = async (optionId: number, updates: Partial<ModifierOption>) => {
     try {
       const response = await apiClient.patch(`/menu/modifiers/options/${optionId}`, updates);
@@ -250,7 +366,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!form.category_id || !form.name || form.price <= 0) {
+    if (!form.category_id || !form.name || parseFloat(form.price) <= 0) {
       setError('Please fill in all required fields');
       return;
     }
@@ -262,16 +378,51 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
       const submitData = {
         ...form,
-        price: parseFloat(form.price.toString()),
       };
 
       let itemIdToUse = currentItemId;
 
       if (currentItemId) {
+        // Update existing menu item
         await apiClient.put(`/menu/items/${currentItemId}`, submitData);
       } else {
+        // Create new menu item
         const response = await apiClient.post('/menu/items', submitData);
         itemIdToUse = response.data.id;
+      }
+
+      // Handle modifier groups for new items or when editing
+      if (!currentItemId && itemIdToUse) {
+        // For new items, create all modifier groups
+        for (const group of modifierGroups) {
+          try {
+            const groupResponse = await apiClient.post('/menu/modifiers/groups', {
+              menu_item_id: itemIdToUse,
+              name: group.name,
+              type: group.type,
+              is_required: group.is_required,
+              display_order: group.display_order,
+            });
+
+            const newGroupId = groupResponse.data.id;
+
+            // Create options for this group
+            if (group.options && group.options.length > 0) {
+              for (const option of group.options) {
+                await apiClient.post('/menu/modifiers/options', {
+                  modifier_group_id: newGroupId,
+                  name: option.name,
+                  price_adjustment: option.price_adjustment,
+                  display_order: option.display_order,
+                  is_available: option.is_available,
+                });
+              }
+            }
+          } catch (groupErr: any) {
+            console.error('Failed to create modifier group:', groupErr);
+            setError('Menu item created but some modifier groups failed to save');
+          }
+        }
       }
 
       // Upload image if selected
@@ -421,7 +572,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
             step="0.01"
             min="0"
             value={form.price}
-            onChange={(e) => setForm(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+            onChange={(e) => setForm(prev => ({ ...prev, price: e.target.value }))}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
           />
@@ -500,14 +651,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
             </label>
             <button
               type="button"
-              onClick={() => {
-                const name = prompt('Enter modifier group name:');
-                const type = confirm('Is this a multiple selection group? (Cancel for single)') ? 'multiple' : 'single';
-                const isRequired = confirm('Is this group required?');
-                if (name) {
-                  handleAddModifierGroup({ name, type, is_required: isRequired });
-                }
-              }}
+              onClick={() => openModifierGroupModal()}
               className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
             >
               Add Group
@@ -527,10 +671,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        const name = prompt('Enter new name:', group.name);
-                        if (name) handleUpdateModifierGroup(group.id, { name });
-                      }}
+                      onClick={() => openModifierGroupModal(group)}
                       className="text-blue-600 text-sm hover:text-blue-800"
                     >
                       Edit
@@ -551,14 +692,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
                     <span className="text-sm font-medium">Options</span>
                     <button
                       type="button"
-                      onClick={() => {
-                        const name = prompt('Enter option name:');
-                        const priceStr = prompt('Enter price adjustment (0 for no change):', '0');
-                        const price = parseFloat(priceStr || '0');
-                        if (name && !isNaN(price)) {
-                          handleAddModifierOption(group.id, { name, price_adjustment: price, is_available: true });
-                        }
-                      }}
+                      onClick={() => openModifierOptionModal(group.id)}
                       className="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700"
                     >
                       Add Option
@@ -570,19 +704,16 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
                       <div key={option.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
                         <div>
                           <span className="text-sm">{option.name}</span>
-                          {option.price_adjustment !== 0 && (
+                          {parseFloat(option.price_adjustment) !== 0 && (
                             <span className="text-sm text-gray-600 ml-2">
-                              ({option.price_adjustment > 0 ? '+' : ''}${parseFloat(option.price_adjustment).toFixed(2)})
+                              ({parseFloat(option.price_adjustment) > 0 ? '+' : ''}${parseFloat(option.price_adjustment).toFixed(2)})
                             </span>
                           )}
                         </div>
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            onClick={() => {
-                              const name = prompt('Enter new name:', option.name);
-                              if (name) handleUpdateModifierOption(option.id, { name });
-                            }}
+                            onClick={() => openModifierOptionModal(group.id, option)}
                             className="text-xs text-blue-600 hover:text-blue-800"
                           >
                             Edit
@@ -623,6 +754,138 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
           )}
         </div>
       </form>
+
+      {/* Modifier Group Modal */}
+      {showModifierGroupModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-medium mb-4">
+              {editingModifierGroup ? 'Edit Modifier Group' : 'Add Modifier Group'}
+            </h3>
+            <form onSubmit={handleModifierGroupSubmit}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={modifierGroupForm.name}
+                    onChange={(e) => setModifierGroupForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Type *
+                  </label>
+                  <select
+                    value={modifierGroupForm.type}
+                    onChange={(e) => setModifierGroupForm(prev => ({ ...prev, type: e.target.value as 'single' | 'multiple' }))}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="single">Single Selection</option>
+                    <option value="multiple">Multiple Selection</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={modifierGroupForm.is_required}
+                      onChange={(e) => setModifierGroupForm(prev => ({ ...prev, is_required: e.target.checked }))}
+                      className="mr-2"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Required</span>
+                  </label>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={closeModifierGroupModal}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+                >
+                  {editingModifierGroup ? 'Update' : 'Add'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modifier Option Modal */}
+      {showModifierOptionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-medium mb-4">
+              {editingModifierOption ? 'Edit Modifier Option' : 'Add Modifier Option'}
+            </h3>
+            <form onSubmit={handleModifierOptionSubmit}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={modifierOptionForm.name}
+                    onChange={(e) => setModifierOptionForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Price Adjustment
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={modifierOptionForm.price_adjustment}
+                    onChange={(e) => setModifierOptionForm(prev => ({ ...prev, price_adjustment: e.target.value }))}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={modifierOptionForm.is_available}
+                      onChange={(e) => setModifierOptionForm(prev => ({ ...prev, is_available: e.target.checked }))}
+                      className="mr-2"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Available</span>
+                  </label>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={closeModifierOptionModal}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+                >
+                  {editingModifierOption ? 'Update' : 'Add'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       </div>
     </DashboardLayout>
   );

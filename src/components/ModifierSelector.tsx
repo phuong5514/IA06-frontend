@@ -14,7 +14,7 @@ interface ModifierOption {
   id: number;
   modifier_group_id: number;
   name: string;
-  price_adjustment: number;
+  price_adjustment: string;
   display_order: number;
   is_available: boolean;
 }
@@ -172,11 +172,11 @@ export default function ModifierSelector({ itemId, onSelectionChange, selectedMo
                           <span className="font-medium">{option.name}</span>
                         </div>
 
-                        {option.price_adjustment !== 0 && (
+                        {parseFloat(option.price_adjustment) !== 0 && (
                           <span className={`font-medium ${
-                            option.price_adjustment > 0 ? 'text-green-600' : 'text-red-600'
+                            parseFloat(option.price_adjustment) > 0 ? 'text-green-600' : 'text-red-600'
                           }`}>
-                            {option.price_adjustment > 0 ? '+' : ''}${parseFloat(option.price_adjustment).toFixed(2)}
+                            {parseFloat(option.price_adjustment) > 0 ? '+' : ''}${parseFloat(option.price_adjustment).toFixed(2)}
                           </span>
                         )}
                       </label>

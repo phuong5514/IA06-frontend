@@ -15,7 +15,7 @@ interface MenuItem {
   category_id: number;
   name: string;
   description?: string;
-  price: number;
+  price: string;
   image_url?: string;
   dietary_tags: string[];
   is_available: boolean;
