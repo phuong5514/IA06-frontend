@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../config/api';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 
 interface MenuCategory {
@@ -68,10 +68,15 @@ interface MenuItemEditorProps {
 }
 
 export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEditorProps) {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const urlItemId = searchParams.get('id');
+  const currentItemId = itemId || (urlItemId ? parseInt(urlItemId, 10) : null);
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
@@ -87,10 +92,10 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
   useEffect(() => {
     fetchCategories();
-    if (itemId) {
+    if (currentItemId) {
       fetchItem();
     }
-  }, [itemId]);
+  }, [currentItemId]);
 
   const fetchCategories = async () => {
     try {
@@ -102,11 +107,11 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
   };
 
   const fetchItem = async () => {
-    if (!itemId) return;
+    if (!currentItemId) return;
 
     try {
       setLoading(true);
-      const response = await apiClient.get(`/menu/items/${itemId}`);
+      const response = await apiClient.get(`/menu/items/${currentItemId}`);
       const item: MenuItem = response.data;
       setForm({
         category_id: item.category_id,
@@ -130,10 +135,10 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
   };
 
   const fetchModifierGroups = async () => {
-    if (!itemId) return;
+    if (!currentItemId) return;
 
     try {
-      const response = await apiClient.get(`/menu/modifiers/items/${itemId}/groups`);
+      const response = await apiClient.get(`/menu/modifiers/items/${currentItemId}/groups`);
       setModifierGroups(response.data.groups);
     } catch (err: any) {
       console.error('Failed to fetch modifier groups:', err);
@@ -162,11 +167,11 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
   };
 
   const handleAddModifierGroup = async (groupData: Omit<ModifierGroup, 'id' | 'menu_item_id' | 'display_order' | 'options'>) => {
-    if (!itemId) return;
+    if (!currentItemId) return;
 
     try {
       const response = await apiClient.post('/menu/modifiers/groups', {
-        menu_item_id: itemId,
+        menu_item_id: currentItemId,
         ...groupData,
         display_order: modifierGroups.length,
       });
@@ -253,16 +258,17 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
     try {
       setSaving(true);
       setError(null);
+      setSuccess(null);
 
       const submitData = {
         ...form,
         price: parseFloat(form.price.toString()),
       };
 
-      let itemIdToUse = itemId;
+      let itemIdToUse = currentItemId;
 
-      if (itemId) {
-        await apiClient.put(`/menu/items/${itemId}`, submitData);
+      if (currentItemId) {
+        await apiClient.put(`/menu/items/${currentItemId}`, submitData);
       } else {
         const response = await apiClient.post('/menu/items', submitData);
         itemIdToUse = response.data.id;
@@ -278,6 +284,11 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
           },
         });
       }
+
+      setSuccess(currentItemId ? 'Menu item updated successfully!' : 'Menu item created successfully!');
+      setTimeout(() => {
+        navigate('/admin/menu-items');
+      }, 1500);
 
       onSave?.();
     } catch (err: any) {
@@ -332,7 +343,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m9 5 7 7-7 7"/>
                   </svg>
                   <span className="ml-1 text-sm font-medium text-gray-500 md:ml-2">
-                    {itemId ? 'Edit Item' : 'Create Item'}
+                    {currentItemId ? 'Edit Item' : 'Create Item'}
                   </span>
                 </div>
               </li>
@@ -341,12 +352,18 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
         </div>
 
         <h2 className="text-2xl font-bold mb-6">
-        {itemId ? 'Edit Menu Item' : 'Create Menu Item'}
+        {currentItemId ? 'Edit Menu Item' : 'Create Menu Item'}
       </h2>
 
       {error && (
         <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
           {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+          {success}
         </div>
       )}
 
@@ -593,7 +610,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
             disabled={saving}
             className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
           >
-            {saving ? 'Saving...' : (itemId ? 'Update Item' : 'Create Item')}
+            {saving ? 'Saving...' : (currentItemId ? 'Update Item' : 'Create Item')}
           </button>
           {onCancel && (
             <button
