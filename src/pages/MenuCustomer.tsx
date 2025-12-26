@@ -98,7 +98,7 @@ export default function MenuCustomer() {
                   <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden">
                     {item.image_url && (
                       <img
-                        src={`${API_BASE_URL}${item.image_url}`}
+                        src={item.image_url}
                         alt={item.name}
                         className="w-full h-48 object-cover"
                       />

@@ -230,7 +230,7 @@ export default function GuestMenu() {
                     <div className="relative h-48 bg-gradient-to-br from-indigo-100 to-purple-100">
                       {item.image_url ? (
                         <img
-                          src={`${API_BASE_URL}${item.image_url}`}
+                        src={item.image_url}
                           alt={item.name}
                           className="w-full h-full object-cover"
                         />

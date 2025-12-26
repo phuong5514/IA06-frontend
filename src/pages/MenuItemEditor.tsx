@@ -79,6 +79,8 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
   const [success, setSuccess] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
   const [showModifierGroupModal, setShowModifierGroupModal] = useState(false);
   const [editingModifierGroup, setEditingModifierGroup] = useState<ModifierGroup | null>(null);
@@ -138,7 +140,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
         is_available: item.is_available,
       });
       if (item.image_url) {
-        setImagePreview(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${item.image_url}`);
+        setImagePreview(item.image_url);
       }
       // Fetch modifier groups for this item
       await fetchModifierGroups();
@@ -160,6 +162,58 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
     }
   };
 
+  const handleImageUpload = async (file: File) => {
+    if (!currentItemId) return;
+
+    setUploadingImage(true);
+    setUploadProgress('Getting upload URL...');
+
+    try {
+      // Step 1: Get signed upload URL from backend
+      const uploadUrlResponse = await apiClient.post(`/menu/items/${currentItemId}/image/upload-url`, {
+        fileName: file.name,
+        contentType: file.type,
+      });
+
+      const { signedUrl, fileName: gcsFileName } = uploadUrlResponse.data;
+      setUploadProgress('Uploading to Google Cloud...');
+
+      // Step 2: Upload file directly to GCS
+      const uploadResponse = await fetch(signedUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload image to cloud storage');
+      }
+
+      setUploadProgress('Confirming upload...');
+
+      // Step 3: Confirm upload and get processed URLs
+      const confirmResponse = await apiClient.post(`/menu/items/${currentItemId}/image/confirm`, {
+        gcsFileName,
+      });
+
+      setUploadProgress('Upload complete!');
+      setTimeout(() => setUploadProgress(''), 2000);
+
+      // Update the form with the new image URL
+      // The backend should have updated the menu item with the display URL
+      // Let's refresh the item data or update the preview
+      setImagePreview(confirmResponse.data.urls.display);
+
+    } catch (error: any) {
+      setError(error.response?.data?.message || 'Failed to upload image');
+      setUploadProgress('');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -169,6 +223,11 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+
+      // If we have a current item ID, start the upload process
+      if (currentItemId) {
+        handleImageUpload(file);
+      }
     }
   };
 
@@ -425,15 +484,9 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
         }
       }
 
-      // Upload image if selected
-      if (imageFile && itemIdToUse) {
-        const formData = new FormData();
-        formData.append('image', imageFile);
-        await apiClient.post(`/menu/items/${itemIdToUse}/image`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
+      // Upload image if selected (for new items)
+      if (imageFile && itemIdToUse && !currentItemId) {
+        await handleImageUpload(imageFile);
       }
 
       setSuccess(currentItemId ? 'Menu item updated successfully!' : 'Menu item created successfully!');
@@ -586,8 +639,14 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
             type="file"
             accept="image/*"
             onChange={handleImageChange}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={uploadingImage}
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
           />
+          {uploadProgress && (
+            <div className="mt-2 text-sm text-blue-600">
+              {uploadProgress}
+            </div>
+          )}
           {imagePreview && (
             <div className="mt-2">
               <img
