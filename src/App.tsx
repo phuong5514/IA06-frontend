@@ -21,6 +21,7 @@ import MenuItemEditor from './pages/MenuItemEditor';
 import MenuItemsManagement from './pages/MenuItemsManagement';
 import StaffManagement from './pages/StaffManagement';
 import TableManagement from './pages/TableManagement';
+import TableEditor from './pages/TableEditor';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -119,6 +120,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
                   <TableManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/table-editor"
+              element={
+                <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
+                  <TableEditor />
                 </ProtectedRoute>
               }
             />
