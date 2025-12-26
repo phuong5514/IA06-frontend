@@ -20,6 +20,7 @@ import GuestMenu from './pages/GuestMenu';
 import MenuItemEditor from './pages/MenuItemEditor';
 import MenuItemsManagement from './pages/MenuItemsManagement';
 import StaffManagement from './pages/StaffManagement';
+import TableManagement from './pages/TableManagement';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -110,6 +111,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
                   <MenuItemEditor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/tables"
+              element={
+                <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
+                  <TableManagement />
                 </ProtectedRoute>
               }
             />

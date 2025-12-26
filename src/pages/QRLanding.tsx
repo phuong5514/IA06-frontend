@@ -19,7 +19,7 @@ export default function QRLanding() {
   useEffect(() => {
     const verifyQRToken = async () => {
       // Get QR token from URL params or search params
-      const token = qr_token || searchParams.get('token');
+      const token = qr_token || searchParams.get('token') || searchParams.get('qr');
 
       if (!token) {
         setError('No QR token provided. Please scan a valid QR code.');
