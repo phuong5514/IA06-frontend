@@ -79,7 +79,7 @@ export default function MenuCategoriesAdmin() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this category?')) return;
+    // if (!confirm('Are you sure you want to delete this category?')) return;
 
     try {
       await apiClient.delete(`/menu/categories/${id}`);

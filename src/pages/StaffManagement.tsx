@@ -72,9 +72,9 @@ export default function StaffManagement() {
   }
 
   const handleDeactivate = async (userId: string) => {
-    if (!confirm('Are you sure you want to deactivate this staff member?')) {
-      return
-    }
+    // if (!confirm('Are you sure you want to deactivate this staff member?')) {
+    //   return
+    // }
     try {
       setError(null)
       await apiClient.patch(

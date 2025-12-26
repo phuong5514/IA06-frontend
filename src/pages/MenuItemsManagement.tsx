@@ -73,9 +73,9 @@ export default function MenuItemsManagement() {
   };
 
   const handleDelete = async (itemId: number) => {
-    if (!confirm('Are you sure you want to delete this menu item?')) {
-      return;
-    }
+    // if (!confirm('Are you sure you want to delete this menu item?')) {
+    //   return;
+    // }
 
     try {
       await apiClient.delete(`/menu/items/${itemId}`);
