@@ -46,7 +46,7 @@ export default function GuestMenu() {
       ]);
 
       setCategories(categoriesResponse.data.categories || []);
-      setItems(itemsResponse.data || []);
+      setItems(itemsResponse.data.items || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch menu');
     } finally {
@@ -148,7 +148,7 @@ export default function GuestMenu() {
             >
               All
             </button>
-            {categories.map((category) => (
+            {Array.isArray(categories) && categories.map((category) => (
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
@@ -223,7 +223,7 @@ export default function GuestMenu() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredItems.map((item) => (
+                {Array.isArray(filteredItems) && filteredItems.map((item) => (
                   <div
                     key={item.id}
                     className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300"
@@ -268,7 +268,7 @@ export default function GuestMenu() {
                       )}
 
                       {/* Dietary Tags */}
-                      {item.dietary_tags && item.dietary_tags.length > 0 && (
+                      {item.dietary_tags && Array.isArray(item.dietary_tags) && item.dietary_tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mb-3">
                           {item.dietary_tags.slice(0, 3).map((tag) => (
                             <span
