@@ -130,7 +130,7 @@ export default function ModifierSelector({ itemId, onSelectionChange, selectedMo
       )}
 
       <div className="space-y-6">
-        {modifierGroups.map((group) => {
+        {Array.isArray(modifierGroups) && modifierGroups.map((group) => {
           const selectedOptions = selectedModifiers[group.id] || [];
 
           return (

@@ -164,9 +164,12 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
     try {
       const response = await apiClient.get(`/menu/modifiers/items/${currentItemId}/groups`);
-      setModifierGroups(response.data.groups);
+      // Ensure we always set an array
+      setModifierGroups(Array.isArray(response.data.groups) ? response.data.groups : []);
     } catch (err: any) {
       console.error('Failed to fetch modifier groups:', err);
+      // Set empty array on error to prevent map errors
+      setModifierGroups([]);
     }
   };
 
@@ -795,7 +798,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
           </div>
 
           <div className="space-y-4">
-            {modifierGroups.map((group) => (
+            {Array.isArray(modifierGroups) && modifierGroups.map((group) => (
               <div key={group.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex justify-between items-center mb-3">
                   <div>
