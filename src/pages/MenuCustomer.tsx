@@ -45,7 +45,7 @@ export default function MenuCustomer() {
       ]);
 
       setCategories(categoriesResponse.data.categories);
-      setItems(itemsResponse.data);
+      setItems(itemsResponse.data.items);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch menu');
     } finally {

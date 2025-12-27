@@ -53,9 +53,15 @@ export default function StaffManagement() {
       const response = await apiClient.get(
         `/users/staff?include_inactive=${includeInactive}`
       )
-      setStaff(response.data)
+      if (Array.isArray(response.data)) {
+        setStaff(response.data)
+      } else {
+        setError('Invalid data format received from server')
+        setStaff([])
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load staff')
+      setStaff([])
     } finally {
       setLoading(false)
     }

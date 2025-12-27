@@ -170,15 +170,16 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
     }
   };
 
-  const handleImageUpload = async (file: File) => {
-    if (!currentItemId) return;
+  const handleImageUpload = async (file: File, itemId?: number) => {
+    const idToUse = itemId || currentItemId;
+    if (!idToUse) return;
 
     setUploadingImage(true);
     setUploadProgress('Getting upload URL...');
 
     try {
       // Step 1: Get signed upload URL from backend
-      const uploadUrlResponse = await apiClient.post(`/menu/items/${currentItemId}/image/upload-url`, {
+      const uploadUrlResponse = await apiClient.post(`/menu/items/${idToUse}/image/upload-url`, {
         fileName: file.name,
         contentType: file.type,
       });
@@ -202,7 +203,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
       setUploadProgress('Confirming upload...');
 
       // Step 3: Confirm upload and get processed URLs
-      const confirmResponse = await apiClient.post(`/menu/items/${currentItemId}/image/confirm`, {
+      const confirmResponse = await apiClient.post(`/menu/items/${idToUse}/image/confirm`, {
         gcsFileName,
       });
 
@@ -506,9 +507,9 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
         }
       }
 
-      // Upload image if selected (for new items)
-      if (imageFile && itemIdToUse && !currentItemId) {
-        await handleImageUpload(imageFile);
+      // Upload image if selected
+      if (imageFile && itemIdToUse) {
+        await handleImageUpload(imageFile, itemIdToUse);
       }
 
       setSuccess(currentItemId ? 'Menu item updated successfully!' : 'Menu item created successfully!');
