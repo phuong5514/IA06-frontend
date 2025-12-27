@@ -49,31 +49,67 @@ const TableManagement: React.FC = () => {
       style.id = 'print-styles';
       style.textContent = `
         @media print {
+          /* Hide page content, keep only modal */
+          body { margin: 0; padding: 0; }
+          * { box-shadow: none !important; }
 
+          /* Hide dashboard and navigation */
+          nav, header, aside, footer, .dashboard-layout { display: none !important; }
 
-          body * { display: none !important; }
-          .print-modal-header,
-          .print-modal-controls,
-          .print-modal-overlay { display: none !important; }
-          .print-preview-container,
-          .print-preview-container * {
-            display: block !important;
+          /* Make modal full screen */
+          .print-modal-overlay {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: white !important;
+            z-index: 9999 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: flex-start !important;
+            justify-content: center !important;
           }
+
+          .print-modal-overlay > div {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            max-height: none !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+          }
+
+          /* Hide modal UI elements */
+          .no-print,
+          .print-modal-header,
+          .print-modal-controls { display: none !important; }
+
+          /* Style the content container */
           .print-preview-container {
-            visibility: visible;
             background: white !important;
             border: none !important;
-            padding: 0 !important;
+            padding: 20px !important;
             margin: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
           }
+
           .qr-print-grid {
             display: grid !important;
             grid-template-columns: ${printLayout === 'multiple' ? 'repeat(2, 1fr)' : '1fr'} !important;
             gap: 20px !important;
             page-break-inside: avoid !important;
+            flex: 1 !important;
+            align-content: flex-start !important;
           }
+
           .qr-print-item {
-            display: block !important;
             page-break-inside: avoid !important;
             text-align: center !important;
             padding: 20px !important;
@@ -81,6 +117,7 @@ const TableManagement: React.FC = () => {
             border-radius: 8px !important;
             break-inside: avoid !important;
           }
+
           .qr-print-item.single {
             max-width: 400px !important;
             margin: 0 auto !important;
