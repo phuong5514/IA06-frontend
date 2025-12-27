@@ -30,6 +30,7 @@ interface Table {
 const MapViewer: React.FC = () => {
   const queryClient = useQueryClient();
   const [draggedTable, setDraggedTable] = useState<Table | null>(null);
+  const [draggedLocation, setDraggedLocation] = useState<Location | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +76,56 @@ const MapViewer: React.FC = () => {
     },
     onError: (error: any) => {
       console.error('Update error:', error);
+    },
+  });
+
+  // Update location position mutation
+  const updateLocationPosition = useMutation({
+    mutationFn: async ({
+      locationId,
+      positionX,
+      positionY,
+    }: {
+      locationId: number;
+      positionX: number;
+      positionY: number;
+    }) => {
+      const response = await apiClient.put(`admin/locations/${locationId}`, {
+        position_x: positionX,
+        position_y: positionY,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+    },
+    onError: (error: any) => {
+      console.error('Update location error:', error);
+    },
+  });
+
+  // Update location size mutation
+  const updateLocationSize = useMutation({
+    mutationFn: async ({
+      locationId,
+      width,
+      height,
+    }: {
+      locationId: number;
+      width: number;
+      height: number;
+    }) => {
+      const response = await apiClient.put(`admin/locations/${locationId}`, {
+        width,
+        height,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+    },
+    onError: (error: any) => {
+      console.error('Update location size error:', error);
     },
   });
 
@@ -142,23 +193,85 @@ const MapViewer: React.FC = () => {
     });
   };
 
-  // Handle drop outside locations (unassign)
-  const handleDropOutside = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (!draggedTable) return;
-
-    updateTablePosition.mutate({
-      tableId: draggedTable.id,
-      locationId: undefined,
-      positionX: undefined,
-      positionY: undefined,
-    });
-  };
-
   // Allow drop
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+  };
+
+  // Handle drag start for location
+  const handleLocationDragStart = (e: React.DragEvent, location: Location) => {
+    setDraggedLocation(location);
+    setIsDragging(true);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  // Handle drag end for location
+  const handleLocationDragEnd = () => {
+    setDraggedLocation(null);
+    setIsDragging(false);
+  };
+
+  // Handle drop on map (for locations and unassigning tables)
+  const handleMapDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (draggedLocation) {
+      // Handle location repositioning
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const x = e.clientX - rect.left + mapBounds.minX;
+      const y = e.clientY - rect.top + mapBounds.minY;
+
+      // Snap to grid
+      const snappedX = snapToGrid(x);
+      const snappedY = snapToGrid(y);
+
+      updateLocationPosition.mutate({
+        locationId: draggedLocation.id,
+        positionX: snappedX,
+        positionY: snappedY,
+      });
+    } else if (draggedTable) {
+      // Handle unassigning table
+      updateTablePosition.mutate({
+        tableId: draggedTable.id,
+        locationId: undefined,
+        positionX: undefined,
+        positionY: undefined,
+      });
+    }
+  };
+
+  // Handle resize start for location
+  const handleLocationResizeStart = (e: React.MouseEvent, location: Location) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = location.width;
+    const startHeight = location.height;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      moveEvent.preventDefault();
+      // Could add visual feedback here if needed
+    };
+
+    const handleMouseUp = (upEvent: MouseEvent) => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      const deltaX = upEvent.clientX - startX;
+      const deltaY = upEvent.clientY - startY;
+      const newWidth = Math.max(100, snapToGrid(startWidth + deltaX));
+      const newHeight = Math.max(100, snapToGrid(startHeight + deltaY));
+
+      updateLocationSize.mutate({
+        locationId: location.id,
+        width: newWidth,
+        height: newHeight,
+      });
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   };
 
   // Get tables for a specific location
@@ -188,7 +301,7 @@ const MapViewer: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Restaurant Map</h1>
-            <p className="text-gray-600">Drag and drop tables to assign them to locations</p>
+            <p className="text-gray-600">Drag tables to locations. Drag location headers to move locations. Use resize handles to adjust sizes.</p>
           </div>
           <Button
             onClick={() => queryClient.invalidateQueries({ queryKey: ['tables', 'locations'] })}
@@ -219,7 +332,7 @@ const MapViewer: React.FC = () => {
                     minWidth: mapBounds.maxX - mapBounds.minX,
                     minHeight: mapBounds.maxY - mapBounds.minY
                   }}
-                  onDrop={handleDropOutside}
+                  onDrop={handleMapDrop}
                   onDragOver={handleDragOver}
                 >
                   {/* Grid background */}
@@ -235,7 +348,7 @@ const MapViewer: React.FC = () => {
                   {locations.map((location) => (
                     <div
                       key={location.id}
-                      className="absolute border-2 border-blue-500 bg-blue-50 rounded-lg shadow-sm"
+                      className="absolute border-2 border-blue-500 bg-blue-50 rounded-lg shadow-sm group"
                       style={{
                         left: location.position_x - mapBounds.minX,
                         top: location.position_y - mapBounds.minY,
@@ -245,19 +358,35 @@ const MapViewer: React.FC = () => {
                       onDrop={(e) => handleDropOnLocation(e, location)}
                       onDragOver={handleDragOver}
                     >
-                      {/* Location header */}
-                      <div className="bg-blue-500 text-white px-3 py-2 rounded-t-lg">
+                      {/* Location header - draggable */}
+                      <div
+                        className="bg-blue-500 text-white px-3 py-2 rounded-t-lg cursor-move hover:bg-blue-600 transition-colors"
+                        draggable
+                        onDragStart={(e) => handleLocationDragStart(e, location)}
+                        onDragEnd={handleLocationDragEnd}
+                        title="Drag to move location"
+                      >
                         <h3 className="font-semibold text-sm">{location.name}</h3>
                         <p className="text-xs opacity-90">
                           {location.width} × {location.height}
                         </p>
                       </div>
 
+                      {/* Resize handle */}
+                      <div
+                        className="absolute bottom-0 right-0 w-4 h-4 bg-blue-600 cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                        onMouseDown={(e) => handleLocationResizeStart(e, location)}
+                        title="Resize location"
+                      >
+                        <div className="absolute bottom-0 right-0 w-0 h-0 border-l-4 border-l-transparent border-b-4 border-b-white"></div>
+                        <div className="absolute bottom-1 right-1 w-0 h-0 border-l-2 border-l-transparent border-b-2 border-b-blue-600"></div>
+                      </div>
+
                       {/* Tables in this location */}
                       {getTablesForLocation(location.id).map((table) => (
                         <div
                           key={table.id}
-                          className="absolute bg-green-500 text-white rounded-lg shadow-md cursor-move hover:bg-green-600 transition-colors"
+                          className="absolute bg-green-500 text-white rounded-lg shadow-md cursor-move hover:bg-green-600 transition-colors group"
                           style={{
                             left: table.position_x || 10,
                             top: table.position_y || 10,
@@ -274,6 +403,11 @@ const MapViewer: React.FC = () => {
                             <span className="font-bold">{table.table_number}</span>
                             <span className="text-xs">{table.capacity}</span>
                           </div>
+                          {/* Resize handle for table */}
+                          <div
+                            className="absolute bottom-0 right-0 w-2 h-2 bg-green-700 cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity rounded-sm"
+                            title="Resize table (coming soon)"
+                          />
                         </div>
                       ))}
 
@@ -292,11 +426,11 @@ const MapViewer: React.FC = () => {
                     <div className="space-y-1 text-xs">
                       <div className="flex items-center">
                         <div className="w-4 h-4 bg-blue-500 rounded mr-2"></div>
-                        <span>Location Area</span>
+                        <span>Location Area (drag header to move, resize handle to adjust size)</span>
                       </div>
                       <div className="flex items-center">
                         <div className="w-4 h-4 bg-green-500 rounded mr-2"></div>
-                        <span>Table</span>
+                        <span>Table (drag to move, resize handle to adjust size)</span>
                       </div>
                     </div>
                   </div>
