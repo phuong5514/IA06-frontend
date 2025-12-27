@@ -25,11 +25,13 @@ const TableManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [locationFilter, setLocationFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'table_number' | 'capacity' | 'created_at' | 'updated_at'>('table_number');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
   useEffect(() => {
     fetchTables();
-  }, [searchTerm, statusFilter, locationFilter]);
+  }, [searchTerm, statusFilter, locationFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -50,6 +52,8 @@ const TableManagement: React.FC = () => {
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (locationFilter) params.append('location', locationFilter);
+      params.append('sortBy', sortBy);
+      params.append('sortOrder', sortOrder);
 
       const response = await apiClient.get(`admin/tables?${params}`);
       setTables(response.data);
@@ -240,7 +244,7 @@ const TableManagement: React.FC = () => {
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Search */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -287,6 +291,38 @@ const TableManagement: React.FC = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
+
+            {/* Sort By */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Sort By
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'table_number' | 'capacity' | 'created_at' | 'updated_at')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="table_number">Table Number</option>
+                <option value="capacity">Capacity</option>
+                <option value="created_at">Creation Date</option>
+                <option value="updated_at">Last Edited</option>
+              </select>
+            </div>
+
+            {/* Sort Order */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Order
+              </label>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -322,6 +358,8 @@ const TableManagement: React.FC = () => {
                   <p>Capacity: {table.capacity} seats</p>
                   {table.location && <p>Location: {table.location}</p>}
                   {table.description && <p>Description: {table.description}</p>}
+                  <p>Created: {new Date(table.created_at).toLocaleDateString()}</p>
+                  <p>Updated: {new Date(table.updated_at).toLocaleDateString()}</p>
                   {table.qr_generated_at && (
                     <p>QR Generated: {new Date(table.qr_generated_at).toLocaleDateString()}</p>
                   )}
