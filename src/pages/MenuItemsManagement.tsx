@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../config/api';
 import { useNavigate, Link } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
 interface MenuCategory {
@@ -117,16 +118,6 @@ export default function MenuItemsManagement() {
     return category ? category.name : 'Unknown';
   };
 
-  const handleSort = (column: string) => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(column);
-      setSortOrder('asc');
-    }
-    setCurrentPage(1); // Reset to first page when sorting changes
-  };
-
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
@@ -178,9 +169,10 @@ export default function MenuItemsManagement() {
           <h1 className="text-2xl font-bold text-gray-800">Menu Items</h1>
           <button
             onClick={() => navigate('/admin/menu-editor')}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
           >
-            + Add Menu Item
+            <Plus size={16} />
+            Add Menu Item
           </button>
         </div>
 
@@ -192,7 +184,7 @@ export default function MenuItemsManagement() {
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Search */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -228,6 +220,21 @@ export default function MenuItemsManagement() {
               </select>
             </div>
 
+            {/* Availability Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Status
+              </label>
+              <select
+                value={showUnavailable ? 'all' : 'available'}
+                onChange={(e) => setShowUnavailable(e.target.value === 'all')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="available">Available Only</option>
+                <option value="all">All Status</option>
+              </select>
+            </div>
+
             {/* Sort By */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -235,7 +242,7 @@ export default function MenuItemsManagement() {
               </label>
               <select
                 value={sortBy}
-                onChange={(e) => handleSort(e.target.value)}
+                onChange={(e) => setSortBy(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="display_order">Display Order</option>
@@ -245,26 +252,19 @@ export default function MenuItemsManagement() {
               </select>
             </div>
 
-            {/* Availability Filter */}
-            <div className="flex items-end space-x-4">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showUnavailable}
-                  onChange={(e) => setShowUnavailable(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                />
-                <span className="text-sm text-gray-700">Show unavailable</span>
+            {/* Sort Order */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Order
               </label>
-              {sortBy !== 'display_order' && (
-                <button
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded"
-                  title={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
-                >
-                  {sortOrder === 'asc' ? '↑' : '↓'}
-                </button>
-              )}
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+              </select>
             </div>
           </div>
         </div>

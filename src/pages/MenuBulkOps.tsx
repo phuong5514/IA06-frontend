@@ -86,7 +86,7 @@ const MenuBulkOps: React.FC = () => {
             </p>
             <button
               onClick={handleExport}
-              className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
             >
               <Download className="h-4 w-4" />
               Export CSV
@@ -128,7 +128,7 @@ const MenuBulkOps: React.FC = () => {
               <button
                 onClick={handleImport}
                 disabled={!selectedFile || importMutation.isPending}
-                className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
               >
                 {importMutation.isPending ? (
                   <>

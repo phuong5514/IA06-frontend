@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { apiClient } from '../config/api'
 import { useAuth } from '../context/AuthContext'
+import { Plus } from 'lucide-react'
 import './StaffManagement.css'
 import DashboardLayout from '../components/DashboardLayout'
 
@@ -135,8 +136,9 @@ export default function StaffManagement() {
             />
             Show inactive
           </label>
-          <button className="btn-primary" onClick={() => setShowCreateForm(true)}>
-            + Add Staff
+          <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2" onClick={() => setShowCreateForm(true)}>
+            <Plus size={16} />
+            Add Staff
           </button>
         </div>
       </div>
@@ -220,10 +222,10 @@ export default function StaffManagement() {
               </div>
 
               <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowCreateForm(false)}>
+                <button type="button" className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors" onClick={() => setShowCreateForm(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary">
+                <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
                   Create Staff
                 </button>
               </div>
@@ -272,14 +274,14 @@ export default function StaffManagement() {
                   <td>
                     {member.is_active ? (
                       <button
-                        className="btn-danger btn-small"
+                        className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
                         onClick={() => handleDeactivate(member.id)}
                       >
                         Deactivate
                       </button>
                     ) : (
                       <button
-                        className="btn-success btn-small"
+                        className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
                         onClick={() => handleActivate(member.id)}
                       >
                         Activate

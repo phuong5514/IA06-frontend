@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../config/api';
+import { Plus } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
 interface MenuCategory {
@@ -117,8 +118,9 @@ export default function MenuCategoriesAdmin() {
         <h1 className="text-2xl font-bold">Menu Categories</h1>
         <button
           onClick={() => setShowCreateForm(true)}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
         >
+          <Plus size={16} />
           Add Category
         </button>
       </div>
@@ -155,14 +157,14 @@ export default function MenuCategoriesAdmin() {
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
               >
                 Create
               </button>
               <button
                 type="button"
                 onClick={() => setShowCreateForm(false)}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
               >
                 Cancel
               </button>
@@ -198,14 +200,14 @@ export default function MenuCategoriesAdmin() {
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
                   >
                     Save
                   </button>
                   <button
                     type="button"
                     onClick={cancelEdit}
-                    className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                    className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
                   >
                     Cancel
                   </button>
@@ -225,13 +227,13 @@ export default function MenuCategoriesAdmin() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => startEdit(category)}
-                    className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(category.id)}
-                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                    className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
                   >
                     Delete
                   </button>
