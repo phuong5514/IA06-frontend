@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Rnd } from 'react-rnd';
 import { apiClient } from '../config/api';
 import DashboardLayout from '../components/DashboardLayout';
 import { Button } from '../components/ui/button';
@@ -30,8 +31,6 @@ interface Table {
 const MapViewer: React.FC = () => {
   const queryClient = useQueryClient();
   const [draggedTable, setDraggedTable] = useState<Table | null>(null);
-  const [draggedLocation, setDraggedLocation] = useState<Location | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
 
   // Fetch locations and tables
@@ -150,47 +149,81 @@ const MapViewer: React.FC = () => {
 
   const mapBounds = getMapBounds();
 
-  // Snap to grid function
-  const snapToGrid = (value: number, gridSize: number = 20) => {
-    return Math.round(value / gridSize) * gridSize;
+  // Collision detection utilities
+  const checkOverlap = (rect1: { x: number; y: number; width: number; height: number }, rect2: { x: number; y: number; width: number; height: number }) => {
+    return !(rect1.x + rect1.width <= rect2.x || 
+             rect2.x + rect2.width <= rect1.x || 
+             rect1.y + rect1.height <= rect2.y || 
+             rect2.y + rect2.height <= rect1.y);
   };
 
-  // Handle drag start
+  const findNonOverlappingPosition = (rect: { x: number; y: number; width: number; height: number }, obstacles: Array<{ x: number; y: number; width: number; height: number }>, maxAttempts: number = 50) => {
+    let attempts = 0;
+    let currentRect = { ...rect };
+    
+    while (attempts < maxAttempts) {
+      let hasOverlap = false;
+      
+      for (const obstacle of obstacles) {
+        if (checkOverlap(currentRect, obstacle)) {
+          hasOverlap = true;
+          // Try to move the rectangle in different directions
+          const directions = [
+            { x: obstacle.width + 10, y: 0 },   // Move right
+            { x: -rect.width - 10, y: 0 },     // Move left
+            { x: 0, y: obstacle.height + 10 },  // Move down
+            { x: 0, y: -rect.height - 10 },     // Move up
+            { x: obstacle.width + 10, y: obstacle.height + 10 }, // Move diagonally
+            { x: -rect.width - 10, y: -rect.height - 10 },
+          ];
+          
+          // Try the first direction that doesn't cause overlap
+          for (const dir of directions) {
+            const testRect = { 
+              x: currentRect.x + dir.x, 
+              y: currentRect.y + dir.y, 
+              width: currentRect.width, 
+              height: currentRect.height 
+            };
+            
+            let testOverlap = false;
+            for (const otherObstacle of obstacles) {
+              if (checkOverlap(testRect, otherObstacle)) {
+                testOverlap = true;
+                break;
+              }
+            }
+            
+            if (!testOverlap) {
+              currentRect = testRect;
+              hasOverlap = false;
+              break;
+            }
+          }
+          
+          if (hasOverlap) break;
+        }
+      }
+      
+      if (!hasOverlap) {
+        return currentRect;
+      }
+      
+      attempts++;
+    }
+    
+    return rect; // Return original if no solution found
+  };
+
+  // Handle drag start for sidebar tables
   const handleDragStart = (e: React.DragEvent, table: Table) => {
     setDraggedTable(table);
-    setIsDragging(true);
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  // Handle drag end
+  // Handle drag end for sidebar tables
   const handleDragEnd = () => {
     setDraggedTable(null);
-    setIsDragging(false);
-  };
-
-  // Handle drop on location
-  const handleDropOnLocation = (e: React.DragEvent, location: Location) => {
-    e.preventDefault();
-    if (!draggedTable) return;
-
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    // Snap to grid
-    const snappedX = snapToGrid(x);
-    const snappedY = snapToGrid(y);
-
-    // Ensure position is within location bounds
-    const clampedX = Math.max(0, Math.min(snappedX, location.width - 60));
-    const clampedY = Math.max(0, Math.min(snappedY, location.height - 60));
-
-    updateTablePosition.mutate({
-      tableId: draggedTable.id,
-      locationId: location.id,
-      positionX: clampedX,
-      positionY: clampedY,
-    });
   };
 
   // Allow drop
@@ -199,79 +232,143 @@ const MapViewer: React.FC = () => {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  // Handle drag start for location
-  const handleLocationDragStart = (e: React.DragEvent, location: Location) => {
-    setDraggedLocation(location);
-    setIsDragging(true);
-    e.dataTransfer.effectAllowed = 'move';
+  // Handle location drag stop
+  const handleLocationDragStop = (location: Location, d: { x: number; y: number }) => {
+    let newX = d.x + mapBounds.minX;
+    let newY = d.y + mapBounds.minY;
+
+    // Create obstacle rectangles for all other locations
+    const obstacles = locations
+      .filter(loc => loc.id !== location.id)
+      .map(loc => ({
+        x: loc.position_x,
+        y: loc.position_y,
+        width: loc.width,
+        height: loc.height
+      }));
+
+    // Check for overlaps and find non-overlapping position
+    const proposedRect = { x: newX, y: newY, width: location.width, height: location.height };
+    const adjustedRect = findNonOverlappingPosition(proposedRect, obstacles);
+
+    updateLocationPosition.mutate({
+      locationId: location.id,
+      positionX: adjustedRect.x,
+      positionY: adjustedRect.y,
+    });
   };
 
-  // Handle drag end for location
-  const handleLocationDragEnd = () => {
-    setDraggedLocation(null);
-    setIsDragging(false);
-  };
+  // Handle location resize stop
+  const handleLocationResizeStop = (
+    _location: Location,
+    _direction: string,
+    ref: HTMLElement,
+    _delta: { width: number; height: number },
+    _position: { x: number; y: number }
+  ) => {
+    const newWidth = ref.offsetWidth;
+    const newHeight = ref.offsetHeight;
 
-  // Handle drop on map (for locations and unassigning tables)
-  const handleMapDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (draggedLocation) {
-      // Handle location repositioning
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const x = e.clientX - rect.left + mapBounds.minX;
-      const y = e.clientY - rect.top + mapBounds.minY;
+    // Create obstacle rectangles for all other locations
+    const obstacles = locations
+      .filter(loc => loc.id !== _location.id)
+      .map(loc => ({
+        x: loc.position_x,
+        y: loc.position_y,
+        width: loc.width,
+        height: loc.height
+      }));
 
-      // Snap to grid
-      const snappedX = snapToGrid(x);
-      const snappedY = snapToGrid(y);
+    // Check if the resized location overlaps with others
+    const proposedRect = { 
+      x: _location.position_x, 
+      y: _location.position_y, 
+      width: newWidth, 
+      height: newHeight 
+    };
+    
+    let hasOverlap = false;
+    for (const obstacle of obstacles) {
+      if (checkOverlap(proposedRect, obstacle)) {
+        hasOverlap = true;
+        break;
+      }
+    }
 
-      updateLocationPosition.mutate({
-        locationId: draggedLocation.id,
-        positionX: snappedX,
-        positionY: snappedY,
-      });
-    } else if (draggedTable) {
-      // Handle unassigning table
-      updateTablePosition.mutate({
-        tableId: draggedTable.id,
-        locationId: undefined,
-        positionX: undefined,
-        positionY: undefined,
+    // Only update if there's no overlap
+    if (!hasOverlap) {
+      updateLocationSize.mutate({
+        locationId: _location.id,
+        width: newWidth,
+        height: newHeight,
       });
     }
   };
 
-  // Handle resize start for location
-  const handleLocationResizeStart = (e: React.MouseEvent, location: Location) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startWidth = location.width;
-    const startHeight = location.height;
+  // Handle table drag stop
+  const handleTableDragStop = (table: Table, d: { x: number; y: number }) => {
+    // Find which location this table is being dropped on
+    const location = locations.find(loc => {
+      const locLeft = loc.position_x - mapBounds.minX;
+      const locTop = loc.position_y - mapBounds.minY;
+      const locRight = locLeft + loc.width;
+      const locBottom = locTop + loc.height;
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      moveEvent.preventDefault();
-      // Could add visual feedback here if needed
-    };
+      return d.x >= locLeft && d.x <= locRight && d.y >= locTop && d.y <= locBottom;
+    });
 
-    const handleMouseUp = (upEvent: MouseEvent) => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      const deltaX = upEvent.clientX - startX;
-      const deltaY = upEvent.clientY - startY;
-      const newWidth = Math.max(100, snapToGrid(startWidth + deltaX));
-      const newHeight = Math.max(100, snapToGrid(startHeight + deltaY));
+    let finalX: number;
+    let finalY: number;
+    let locationId: number | undefined;
 
-      updateLocationSize.mutate({
-        locationId: location.id,
-        width: newWidth,
-        height: newHeight,
-      });
-    };
+    if (location) {
+      // Dropped on a location - get relative position
+      const relativeX = d.x - (location.position_x - mapBounds.minX);
+      const relativeY = d.y - (location.position_y - mapBounds.minY);
+      
+      // Create obstacle rectangles for all other tables in this location
+      const obstacles = tables
+        .filter(t => t.id !== table.id && t.location_id === location.id && t.is_active)
+        .map(t => ({
+          x: t.position_x || 0,
+          y: t.position_y || 0,
+          width: 50,
+          height: 50
+        }));
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+      // Check for overlaps and find non-overlapping position
+      const proposedRect = { x: relativeX, y: relativeY, width: 50, height: 50 };
+      const adjustedRect = findNonOverlappingPosition(proposedRect, obstacles);
+
+      finalX = adjustedRect.x;
+      finalY = adjustedRect.y;
+      locationId = location.id;
+    } else {
+      // Dropped outside locations - unassign and position freely
+      // Create obstacle rectangles for all tables not in locations
+      const obstacles = tables
+        .filter(t => t.id !== table.id && !t.location_id && t.is_active)
+        .map(t => ({
+          x: (t.position_x || 0) + mapBounds.minX,
+          y: (t.position_y || 0) + mapBounds.minY,
+          width: 50,
+          height: 50
+        }));
+
+      const proposedRect = { x: d.x + mapBounds.minX, y: d.y + mapBounds.minY, width: 50, height: 50 };
+      const adjustedRect = findNonOverlappingPosition(proposedRect, obstacles);
+
+      finalX = adjustedRect.x - mapBounds.minX;
+      finalY = adjustedRect.y - mapBounds.minY;
+      locationId = undefined;
+    }
+
+    updateTablePosition.mutate({
+      tableId: table.id,
+      locationId: locationId,
+      positionX: finalX,
+      positionY: finalY,
+    });
   };
 
   // Get tables for a specific location
@@ -301,7 +398,7 @@ const MapViewer: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Restaurant Map</h1>
-            <p className="text-gray-600">Drag tables to locations. Drag location headers to move locations. Use resize handles to adjust sizes.</p>
+            <p className="text-gray-600">Drag location headers to move locations. Use resize handles to adjust sizes. Drag tables freely - they'll automatically avoid overlaps.</p>
           </div>
           <Button
             onClick={() => queryClient.invalidateQueries({ queryKey: ['tables', 'locations'] })}
@@ -332,12 +429,11 @@ const MapViewer: React.FC = () => {
                     minWidth: mapBounds.maxX - mapBounds.minX,
                     minHeight: mapBounds.maxY - mapBounds.minY
                   }}
-                  onDrop={handleMapDrop}
                   onDragOver={handleDragOver}
                 >
                   {/* Grid background */}
                   <div
-                    className="absolute inset-0 opacity-20"
+                    className="absolute inset-0 opacity-10"
                     style={{
                       backgroundImage: 'linear-gradient(to right, #e5e7eb 1px, transparent 1px), linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)',
                       backgroundSize: '20px 20px',
@@ -346,78 +442,61 @@ const MapViewer: React.FC = () => {
 
                   {/* Locations */}
                   {locations.map((location) => (
-                    <div
+                    <Rnd
                       key={location.id}
-                      className="absolute border-2 border-blue-500 bg-blue-50 rounded-lg shadow-sm group"
-                      style={{
-                        left: location.position_x - mapBounds.minX,
-                        top: location.position_y - mapBounds.minY,
-                        width: location.width,
-                        height: location.height,
+                      size={{ width: location.width, height: location.height }}
+                      position={{
+                        x: location.position_x - mapBounds.minX,
+                        y: location.position_y - mapBounds.minY
                       }}
-                      onDrop={(e) => handleDropOnLocation(e, location)}
-                      onDragOver={handleDragOver}
+                      onDragStop={(_e, d) => handleLocationDragStop(location, d)}
+                      onResizeStop={(_e, _direction, ref, _delta, _position) =>
+                        handleLocationResizeStop(location, _direction, ref, _delta, _position)
+                      }
+                      minWidth={100}
+                      minHeight={100}
+                      dragHandleClassName="location-header"
+                      bounds="parent"
+                      className="group"
                     >
-                      {/* Location header - draggable */}
-                      <div
-                        className="bg-blue-500 text-white px-3 py-2 rounded-t-lg cursor-move hover:bg-blue-600 transition-colors"
-                        draggable
-                        onDragStart={(e) => handleLocationDragStart(e, location)}
-                        onDragEnd={handleLocationDragEnd}
-                        title="Drag to move location"
-                      >
-                        <h3 className="font-semibold text-sm">{location.name}</h3>
-                        <p className="text-xs opacity-90">
-                          {location.width} × {location.height}
-                        </p>
-                      </div>
+                      <div className="relative w-full h-full border-2 border-blue-500 bg-blue-50 rounded-lg shadow-sm">
+                        {/* Location header - drag handle */}
+                        <div className="location-header bg-blue-500 text-white px-3 py-2 rounded-t-lg cursor-move hover:bg-blue-600 transition-colors">
+                          <h3 className="font-semibold text-sm">{location.name}</h3>
+                          <p className="text-xs opacity-90">
+                            {location.width} × {location.height}
+                          </p>
+                        </div>
 
-                      {/* Resize handle */}
-                      <div
-                        className="absolute bottom-0 right-0 w-4 h-4 bg-blue-600 cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity"
-                        onMouseDown={(e) => handleLocationResizeStart(e, location)}
-                        title="Resize location"
-                      >
-                        <div className="absolute bottom-0 right-0 w-0 h-0 border-l-4 border-l-transparent border-b-4 border-b-white"></div>
-                        <div className="absolute bottom-1 right-1 w-0 h-0 border-l-2 border-l-transparent border-b-2 border-b-blue-600"></div>
-                      </div>
+                        {/* Tables in this location */}
+                        {getTablesForLocation(location.id).map((table) => (
+                          <Rnd
+                            key={table.id}
+                            size={{ width: 50, height: 50 }}
+                            position={{
+                              x: table.position_x || 10,
+                              y: table.position_y || 10
+                            }}
+                            onDragStop={(_e, d) => handleTableDragStop(table, d)}
+                            enableResizing={false}
+                            className="group"
+                          >
+                            <div className="w-full h-full bg-green-500 text-white rounded-lg shadow-md cursor-move hover:bg-green-600 transition-colors flex flex-col items-center justify-center text-xs">
+                              <Users className="h-3 w-3 mb-1" />
+                              <span className="font-bold">{table.table_number}</span>
+                              <span className="text-xs">{table.capacity}</span>
+                            </div>
+                          </Rnd>
+                        ))}
 
-                      {/* Tables in this location */}
-                      {getTablesForLocation(location.id).map((table) => (
-                        <div
-                          key={table.id}
-                          className="absolute bg-green-500 text-white rounded-lg shadow-md cursor-move hover:bg-green-600 transition-colors group"
-                          style={{
-                            left: table.position_x || 10,
-                            top: table.position_y || 10,
-                            width: 50,
-                            height: 50,
-                          }}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, table)}
-                          onDragEnd={handleDragEnd}
-                          title={`Table ${table.table_number} (${table.capacity} seats)`}
-                        >
-                          <div className="flex flex-col items-center justify-center h-full text-xs">
-                            <Users className="h-3 w-3 mb-1" />
-                            <span className="font-bold">{table.table_number}</span>
-                            <span className="text-xs">{table.capacity}</span>
+                        {/* Drop zone indicator */}
+                        {draggedTable && (
+                          <div className="absolute inset-0 bg-blue-200 bg-opacity-50 rounded-lg border-2 border-dashed border-blue-400 flex items-center justify-center pointer-events-none">
+                            <div className="text-blue-700 font-medium">Drop table here</div>
                           </div>
-                          {/* Resize handle for table */}
-                          <div
-                            className="absolute bottom-0 right-0 w-2 h-2 bg-green-700 cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity rounded-sm"
-                            title="Resize table (coming soon)"
-                          />
-                        </div>
-                      ))}
-
-                      {/* Drop zone indicator */}
-                      {isDragging && (
-                        <div className="absolute inset-0 bg-blue-200 bg-opacity-50 rounded-lg border-2 border-dashed border-blue-400 flex items-center justify-center">
-                          <div className="text-blue-700 font-medium">Drop table here</div>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    </Rnd>
                   ))}
 
                   {/* Legend */}
@@ -426,11 +505,11 @@ const MapViewer: React.FC = () => {
                     <div className="space-y-1 text-xs">
                       <div className="flex items-center">
                         <div className="w-4 h-4 bg-blue-500 rounded mr-2"></div>
-                        <span>Location Area (drag header to move, resize handle to adjust size)</span>
+                        <span>Location Area (drag header to move, resize handles to adjust size) - no overlaps</span>
                       </div>
                       <div className="flex items-center">
                         <div className="w-4 h-4 bg-green-500 rounded mr-2"></div>
-                        <span>Table (drag to move, resize handle to adjust size)</span>
+                        <span>Table (drag freely - automatically avoids overlaps)</span>
                       </div>
                     </div>
                   </div>
