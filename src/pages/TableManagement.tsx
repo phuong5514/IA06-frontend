@@ -48,81 +48,6 @@ const TableManagement: React.FC = () => {
       const style = document.createElement('style');
       style.id = 'print-styles';
       style.textContent = `
-        @media print {
-          /* Hide page content, keep only modal */
-          body { margin: 0; padding: 0; }
-          * { box-shadow: none !important; }
-
-          /* Hide dashboard and navigation */
-          nav, header, aside, footer, .dashboard-layout { display: none !important; }
-
-          /* Make modal full screen */
-          .print-modal-overlay {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            background: white !important;
-            z-index: 9999 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            display: flex !important;
-            align-items: flex-start !important;
-            justify-content: center !important;
-          }
-
-          .print-modal-overlay > div {
-            width: 100% !important;
-            height: 100% !important;
-            max-width: none !important;
-            max-height: none !important;
-            margin: 0 !important;
-            box-shadow: none !important;
-            border-radius: 0 !important;
-          }
-
-          /* Hide modal UI elements */
-          .no-print,
-          .print-modal-header,
-          .print-modal-controls { display: none !important; }
-
-          /* Style the content container */
-          .print-preview-container {
-            background: white !important;
-            border: none !important;
-            padding: 20px !important;
-            margin: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: flex-start !important;
-          }
-
-          .qr-print-grid {
-            display: grid !important;
-            grid-template-columns: ${printLayout === 'multiple' ? 'repeat(2, 1fr)' : '1fr'} !important;
-            gap: 20px !important;
-            page-break-inside: avoid !important;
-            flex: 1 !important;
-            align-content: flex-start !important;
-          }
-
-          .qr-print-item {
-            page-break-inside: avoid !important;
-            text-align: center !important;
-            padding: 20px !important;
-            border: 1px solid #e5e7eb !important;
-            border-radius: 8px !important;
-            break-inside: avoid !important;
-          }
-
-          .qr-print-item.single {
-            max-width: 400px !important;
-            margin: 0 auto !important;
-          }
-        }
         .qr-print-grid {
           display: grid;
           grid-template-columns: ${printLayout === 'multiple' ? 'repeat(2, 1fr)' : '1fr'};
@@ -298,7 +223,171 @@ const TableManagement: React.FC = () => {
   };
 
   const handlePrint = () => {
-    window.print();
+    // Create hidden iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.top = '-9999px';
+    iframe.style.left = '-9999px';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!iframeDoc) {
+      document.body.removeChild(iframe);
+      return;
+    }
+
+    // Get the print preview content
+    const printContent = document.querySelector('.print-preview-container');
+    if (!printContent) {
+      document.body.removeChild(iframe);
+      return;
+    }
+
+    // Clone the content
+    const clonedContent = printContent.cloneNode(true) as HTMLElement;
+
+    // Build the complete HTML content
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Print QR Codes</title>
+          <style>
+            @media print {
+              body { margin: 0; padding: 20px; }
+              .qr-print-grid {
+                display: grid !important;
+                grid-template-columns: ${printLayout === 'multiple' ? 'repeat(2, 1fr)' : '1fr'} !important;
+                gap: 20px !important;
+                page-break-inside: avoid !important;
+              }
+              .qr-print-item {
+                page-break-inside: avoid !important;
+                text-align: center !important;
+                padding: 20px !important;
+                border: 1px solid #e5e7eb !important;
+                border-radius: 8px !important;
+                break-inside: avoid !important;
+                margin-bottom: 20px !important;
+              }
+              .qr-print-item.single {
+                max-width: 400px !important;
+                margin: 0 auto !important;
+              }
+              img {
+                max-width: 200px !important;
+                max-height: 200px !important;
+                border: 1px solid #e5e7eb !important;
+                border-radius: 4px !important;
+              }
+            }
+            body {
+              font-family: system-ui, -apple-system, sans-serif;
+              margin: 0;
+              padding: 20px;
+              background: white;
+              color: black;
+            }
+            .qr-print-grid {
+              display: grid;
+              grid-template-columns: ${printLayout === 'multiple' ? 'repeat(2, 1fr)' : '1fr'};
+              gap: 20px;
+              width: 100%;
+            }
+            .qr-print-item {
+              text-align: center;
+              padding: 20px;
+              border: 1px solid #e5e7eb;
+              border-radius: 8px;
+              margin-bottom: 20px;
+              background: white;
+            }
+            .qr-print-item.single {
+              max-width: 400px;
+              margin: 0 auto;
+            }
+            .qr-print-item h3 {
+              font-size: 18px;
+              font-weight: 600;
+              margin-bottom: 8px;
+              color: #111827;
+            }
+            .qr-print-item .text-sm {
+              font-size: 14px;
+              color: #6b7280;
+            }
+            .qr-print-item img {
+              max-width: 200px;
+              max-height: 200px;
+              border: 1px solid #e5e7eb;
+              border-radius: 4px;
+              margin: 0 auto 8px auto;
+              display: block;
+            }
+          </style>
+        </head>
+        <body>
+          ${clonedContent.outerHTML}
+        </body>
+      </html>
+    `;
+
+    // Open, write, and close the document
+    iframeDoc.open();
+    iframeDoc.write(htmlContent);
+    iframeDoc.close();
+
+    // Wait for images to load, then print
+    const images = iframeDoc.querySelectorAll('img');
+    let loadedImages = 0;
+    const totalImages = images.length;
+
+    const doPrint = () => {
+      try {
+        // Focus the iframe before printing to ensure print dialog opens for the correct content
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (error) {
+        console.error('Print failed:', error);
+      } finally {
+        document.body.removeChild(iframe);
+      }
+    };
+
+    if (totalImages === 0) {
+      // Small delay to ensure DOM is ready
+      setTimeout(doPrint, 100);
+    } else {
+      let hasError = false;
+      images.forEach(img => {
+        if (img.complete) {
+          loadedImages++;
+        } else {
+          img.onload = () => {
+            loadedImages++;
+            if (loadedImages === totalImages && !hasError) {
+              setTimeout(doPrint, 100);
+            }
+          };
+          img.onerror = () => {
+            hasError = true;
+            loadedImages++;
+            if (loadedImages === totalImages) {
+              setTimeout(doPrint, 100);
+            }
+          };
+        }
+      });
+
+      // If all images were already loaded
+      if (loadedImages === totalImages && !hasError) {
+        setTimeout(doPrint, 100);
+      }
+    }
   };
 
   if (loading && tables.length === 0) {
