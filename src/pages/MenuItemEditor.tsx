@@ -226,6 +226,20 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file type
+      const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+      if (!acceptedTypes.includes(file.type)) {
+        setError('Please select a valid image file (JPG, PNG, or WebP)');
+        return;
+      }
+
+      // Validate file size (5MB max)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        setError('Image size must be less than 5MB');
+        return;
+      }
+
       setImageFile(file);
       const reader = new FileReader();
       reader.onload = () => {
@@ -659,11 +673,11 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Image
+            Image (JPG, PNG, WebP - Max 5MB)
           </label>
           <input
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             onChange={handleImageChange}
             disabled={uploadingImage}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
