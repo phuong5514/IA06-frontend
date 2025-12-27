@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../config/api';
-import { Plus, Edit, Trash2, QrCode, Download, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, QrCode, Download, Search, ChevronDown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 
@@ -25,10 +25,22 @@ const TableManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [locationFilter, setLocationFilter] = useState('');
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
   useEffect(() => {
     fetchTables();
   }, [searchTerm, statusFilter, locationFilter]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showDownloadMenu && !(event.target as Element).closest('.relative')) {
+        setShowDownloadMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDownloadMenu]);
 
   const fetchTables = async () => {
     try {
@@ -99,22 +111,43 @@ const TableManagement: React.FC = () => {
     }
   };
 
-  const handleDownloadAll = async () => {
+  const handleDownloadAllPNGs = async () => {
     try {
       setError(null);
-      const response = await apiClient.get('admin/tables/qr/download-all', {
+      const response = await apiClient.get('admin/tables/qr/download-all-pngs', {
         responseType: 'blob',
       });
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'all-tables-qr-codes.zip');
+      link.setAttribute('download', 'all-tables-qr-codes-png.zip');
       document.body.appendChild(link);
       link.click();
       link.remove();
+      setShowDownloadMenu(false);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to download all QR codes');
+      setError(err.response?.data?.message || 'Failed to download all PNG QR codes');
+    }
+  };
+
+  const handleDownloadCombinedPDF = async () => {
+    try {
+      setError(null);
+      const response = await apiClient.get('admin/tables/qr/download-combined-pdf', {
+        responseType: 'blob',
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'all-tables-qr-codes-combined.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setShowDownloadMenu(false);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to download combined PDF QR codes');
     }
   };
 
@@ -159,13 +192,35 @@ const TableManagement: React.FC = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Table Management</h1>
           <div className="flex gap-2">
-            {/* <button
-              onClick={handleDownloadAll}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-            >
-              <Download size={16} />
-              Download All QR
-            </button> */}
+            <div className="relative">
+              <button
+                onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+              >
+                <Download size={16} />
+                Download All QR
+                <ChevronDown size={16} />
+              </button>
+              
+              {showDownloadMenu && (
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                  <button
+                    onClick={handleDownloadAllPNGs}
+                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100 flex items-center gap-2"
+                  >
+                    <Download size={14} />
+                    Download All PNGs
+                  </button>
+                  <button
+                    onClick={handleDownloadCombinedPDF}
+                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <Download size={14} />
+                    Download Combined PDF
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               onClick={() => navigate('/admin/table-editor')}
               className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
