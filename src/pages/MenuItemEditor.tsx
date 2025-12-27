@@ -17,8 +17,10 @@ interface MenuItem {
   price: string;
   image_url?: string;
   dietary_tags: string[];
-  is_available: boolean;
+  status: 'available' | 'unavailable' | 'sold_out';
   display_order: number;
+  preparation_time?: number;
+  chef_recommendation?: boolean;
 }
 
 interface ModifierGroup {
@@ -47,7 +49,9 @@ interface CreateMenuItemForm {
   price: string;
   dietary_tags: string[];
   display_order: number;
-  is_available: boolean;
+  status: 'available' | 'unavailable' | 'sold_out';
+  preparation_time?: number;
+  chef_recommendation?: boolean;
 }
 
 const DIETARY_TAGS = [
@@ -104,7 +108,9 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
     price: '0',
     dietary_tags: [],
     display_order: 0,
-    is_available: true,
+    status: 'available',
+    preparation_time: undefined,
+    chef_recommendation: undefined,
   });
 
   useEffect(() => {
@@ -137,7 +143,9 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
         price: item.price,
         dietary_tags: item.dietary_tags || [],
         display_order: item.display_order,
-        is_available: item.is_available,
+        status: item.status,
+        preparation_time: item.preparation_time,
+        chef_recommendation: item.chef_recommendation,
       });
       if (item.image_url) {
         setImagePreview(item.image_url);
@@ -425,8 +433,22 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!form.category_id || !form.name || parseFloat(form.price) <= 0) {
-      setError('Please fill in all required fields');
+    // Validate name: required, 2-80 characters
+    if (!form.name || form.name.trim().length < 2 || form.name.trim().length > 80) {
+      setError('Name is required and must be between 2-80 characters');
+      return;
+    }
+
+    // Validate price: must be a positive number (0.01 to 999999)
+    const priceValue = parseFloat(form.price);
+    if (isNaN(priceValue) || priceValue < 0.01 || priceValue > 999999) {
+      setError('Price must be a positive number between 0.01 and 999,999');
+      return;
+    }
+
+    // Validate category
+    if (!form.category_id) {
+      setError('Please select a category');
       return;
     }
 
@@ -601,6 +623,8 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
             onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
+            minLength={2}
+            maxLength={80}
           />
         </div>
 
@@ -623,7 +647,8 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
           <input
             type="number"
             step="0.01"
-            min="0"
+            min="0.01"
+            max="999999"
             value={form.price}
             onChange={(e) => setForm(prev => ({ ...prev, price: e.target.value }))}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -678,15 +703,40 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
         </div>
 
         <div>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={form.is_available}
-              onChange={(e) => setForm(prev => ({ ...prev, is_available: e.target.checked }))}
-              className="mr-2"
-            />
-            <span className="text-sm font-medium text-gray-700">Available</span>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Status *
           </label>
+          <select
+            value={form.status}
+            onChange={(e) => setForm(prev => ({ ...prev, status: e.target.value as 'available' | 'unavailable' | 'sold_out' }))}
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required
+          >
+            <option value="available">Available</option>
+            <option value="unavailable">Unavailable</option>
+            <option value="sold_out">Sold Out</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Preparation Time (minutes)
+          </label>
+          <input
+            type="number"
+            min="0"
+            max="240"
+            value={form.preparation_time || ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              const numValue = value ? parseInt(value) : undefined;
+              if (numValue === undefined || (numValue >= 0 && numValue <= 240)) {
+                setForm(prev => ({ ...prev, preparation_time: numValue }));
+              }
+            }}
+            placeholder="Optional (0-240 minutes)"
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
         </div>
 
         <div>
@@ -700,6 +750,18 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
             onChange={(e) => setForm(prev => ({ ...prev, display_order: parseInt(e.target.value) || 0 }))}
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
+        </div>
+
+        <div>
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={form.chef_recommendation || false}
+              onChange={(e) => setForm(prev => ({ ...prev, chef_recommendation: e.target.checked || undefined }))}
+              className="mr-2"
+            />
+            <span className="text-sm font-medium text-gray-700">Chef Recommendation</span>
+          </label>
         </div>
 
         {/* Modifier Groups Section */}

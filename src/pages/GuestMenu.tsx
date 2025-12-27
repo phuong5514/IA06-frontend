@@ -17,8 +17,10 @@ interface MenuItem {
   price: string;
   image_url?: string;
   dietary_tags: string[];
-  is_available: boolean;
+  status: 'available' | 'unavailable' | 'sold_out';
   display_order: number;
+  preparation_time?: number;
+  chef_recommendation?: boolean;
 }
 
 export default function GuestMenu() {
@@ -283,6 +285,20 @@ export default function GuestMenu() {
                           )}
                         </div>
                       )}
+
+                      {/* Preparation Time and Chef Recommendation */}
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {item.preparation_time && (
+                          <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
+                            {item.preparation_time} min prep
+                          </span>
+                        )}
+                        {item.chef_recommendation && (
+                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                            Chef's Choice
+                          </span>
+                        )}
+                      </div>
 
                       {/* Price and Action */}
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">

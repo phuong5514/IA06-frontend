@@ -17,8 +17,10 @@ interface MenuItem {
   price: string;
   image_url?: string;
   dietary_tags: string[];
-  is_available: boolean;
+  status: 'available' | 'unavailable' | 'sold_out';
   display_order: number;
+  preparation_time?: number;
+  chef_recommendation?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -61,10 +63,10 @@ export default function MenuItemsManagement() {
     }
   };
 
-  const handleToggleAvailability = async (itemId: number, currentStatus: boolean) => {
+  const handleStatusChange = async (itemId: number, newStatus: 'available' | 'unavailable' | 'sold_out') => {
     try {
       await apiClient.put(`/menu/items/${itemId}`, {
-        is_available: !currentStatus,
+        status: newStatus,
       });
       fetchData();
     } catch (err: any) {
@@ -224,7 +226,7 @@ export default function MenuItemsManagement() {
               <div
                 key={item.id}
                 className={`bg-white rounded-lg shadow hover:shadow-lg transition-shadow ${
-                  !item.is_available ? 'opacity-60' : ''
+                  item.status !== 'available' ? 'opacity-60' : ''
                 }`}
               >
                 {/* Image */}
@@ -273,16 +275,36 @@ export default function MenuItemsManagement() {
                     </div>
                   )}
 
+                  {/* Preparation Time and Chef Recommendation */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {item.preparation_time && (
+                      <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
+                        {item.preparation_time} min prep
+                      </span>
+                    )}
+                    {item.chef_recommendation && (
+                      <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">
+                        Chef's Choice
+                      </span>
+                    )}
+                  </div>
+
                   {/* Status */}
                   <div className="flex items-center mb-4">
                     <span
                       className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
-                        item.is_available
+                        item.status === 'available'
                           ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
+                          : item.status === 'sold_out'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
                       }`}
                     >
-                      {item.is_available ? 'Available' : 'Unavailable'}
+                      {item.status === 'available'
+                        ? 'Available'
+                        : item.status === 'sold_out'
+                        ? 'Sold Out'
+                        : 'Unavailable'}
                     </span>
                   </div>
 
@@ -294,16 +316,15 @@ export default function MenuItemsManagement() {
                     >
                       Edit
                     </button>
-                    <button
-                      onClick={() => handleToggleAvailability(item.id, item.is_available)}
-                      className={`flex-1 px-3 py-2 rounded transition-colors text-sm ${
-                        item.is_available
-                          ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                          : 'bg-green-100 text-green-800 hover:bg-green-200'
-                      }`}
+                    <select
+                      value={item.status}
+                      onChange={(e) => handleStatusChange(item.id, e.target.value as 'available' | 'unavailable' | 'sold_out')}
+                      className="flex-1 px-3 py-2 rounded transition-colors text-sm bg-white border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     >
-                      {item.is_available ? 'Disable' : 'Enable'}
-                    </button>
+                      <option value="available">Available</option>
+                      <option value="unavailable">Unavailable</option>
+                      <option value="sold_out">Sold Out</option>
+                    </select>
                     <button
                       onClick={() => handleDelete(item.id)}
                       className="px-3 py-2 bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors text-sm"
