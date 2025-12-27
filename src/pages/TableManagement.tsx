@@ -273,6 +273,7 @@ const TableManagement: React.FC = () => {
                 border-radius: 8px !important;
                 break-inside: avoid !important;
                 margin-bottom: 20px !important;
+                ${printLayout === 'single' ? 'page-break-after: always !important;' : ''}
               }
               .qr-print-item.single {
                 max-width: 400px !important;
