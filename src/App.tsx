@@ -8,6 +8,7 @@ import Header from './components/Header';
 import AuthModal from './components/AuthModal';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
+import backgroundImage from './assets/background.png';
 import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
 import RequestPasswordReset from './pages/RequestPasswordReset';
@@ -50,7 +51,10 @@ function App() {
             <Route
               path="/"
               element={
-                <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
+                <div 
+                  className="min-h-screen bg-cover bg-center bg-no-repeat"
+                  style={{ backgroundImage: `url(${backgroundImage})` }}
+                >
                   <Home onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
                   <AuthModal
                     isOpen={isModalOpen}
