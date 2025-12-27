@@ -9,6 +9,10 @@ interface Table {
   table_number: string;
   capacity: number;
   location?: string;
+  location_id?: number;
+  location_name?: string;
+  position_x?: number;
+  position_y?: number;
   description?: string;
   is_active: boolean;
   qr_token?: string;
@@ -37,7 +41,7 @@ const TableManagement: React.FC = () => {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter !== 'all') params.append('status', statusFilter);
-      if (locationFilter) params.append('location', locationFilter);
+      if (locationFilter) params.append('locationId', locationFilter);
 
       const response = await apiClient.get(`admin/tables?${params}`);
       setTables(response.data);
@@ -159,13 +163,13 @@ const TableManagement: React.FC = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Table Management</h1>
           <div className="flex gap-2">
-            {/* <button
+            <button
               onClick={handleDownloadAll}
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
             >
               <Download size={16} />
               Download All QR
-            </button> */}
+            </button>
             <button
               onClick={() => navigate('/admin/table-editor')}
               className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
@@ -265,7 +269,7 @@ const TableManagement: React.FC = () => {
 
                 <div className="space-y-1 text-sm text-gray-600 mb-4">
                   <p>Capacity: {table.capacity} seats</p>
-                  {table.location && <p>Location: {table.location}</p>}
+                  {table.location_name && <p>Location: {table.location_name}</p>}
                   {table.description && <p>Description: {table.description}</p>}
                   {table.qr_generated_at && (
                     <p>QR Generated: {new Date(table.qr_generated_at).toLocaleDateString()}</p>

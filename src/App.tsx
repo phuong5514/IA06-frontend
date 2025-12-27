@@ -22,6 +22,9 @@ import MenuItemsManagement from './pages/MenuItemsManagement';
 import StaffManagement from './pages/StaffManagement';
 import TableManagement from './pages/TableManagement';
 import TableEditor from './pages/TableEditor';
+import LocationManagement from './pages/LocationManagement';
+import LocationEditor from './pages/LocationEditor';
+import MapViewer from './pages/MapViewer';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -128,6 +131,30 @@ function App() {
               element={
                 <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
                   <TableEditor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/locations"
+              element={
+                <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
+                  <LocationManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/location-editor"
+              element={
+                <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
+                  <LocationEditor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/map-viewer"
+              element={
+                <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
+                  <MapViewer />
                 </ProtectedRoute>
               }
             />

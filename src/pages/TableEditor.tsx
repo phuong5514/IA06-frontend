@@ -8,6 +8,10 @@ interface Table {
   table_number: string;
   capacity: number;
   location?: string;
+  location_id?: number;
+  location_name?: string;
+  position_x?: number;
+  position_y?: number;
   description?: string;
   is_active: boolean;
   qr_token?: string;
@@ -19,7 +23,9 @@ interface Table {
 interface TableForm {
   table_number: string;
   capacity: number;
-  location: string;
+  location_id: number | null;
+  position_x: number | null;
+  position_y: number | null;
   description: string;
 }
 
@@ -33,11 +39,14 @@ export default function TableEditor() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [locations, setLocations] = useState<{id: number, name: string}[]>([]);
 
   const [form, setForm] = useState<TableForm>({
     table_number: '',
     capacity: 4,
-    location: '',
+    location_id: null,
+    position_x: null,
+    position_y: null,
     description: '',
   });
 
@@ -46,6 +55,19 @@ export default function TableEditor() {
       fetchTable(parseInt(tableId, 10));
     }
   }, [isEditing, tableId]);
+
+  useEffect(() => {
+    fetchLocations();
+  }, []);
+
+  const fetchLocations = async () => {
+    try {
+      const response = await apiClient.get('admin/locations');
+      setLocations(response.data);
+    } catch (err) {
+      console.error('Failed to load locations:', err);
+    }
+  };
 
   const fetchTable = async (id: number) => {
     try {
@@ -57,7 +79,9 @@ export default function TableEditor() {
       setForm({
         table_number: table.table_number,
         capacity: table.capacity,
-        location: table.location || '',
+        location_id: table.location_id || null,
+        position_x: table.position_x || null,
+        position_y: table.position_y || null,
         description: table.description || '',
       });
     } catch (err: any) {
@@ -94,7 +118,7 @@ export default function TableEditor() {
     }
   };
 
-  const handleInputChange = (field: keyof TableForm, value: string | number) => {
+  const handleInputChange = (field: keyof TableForm, value: string | number | null) => {
     setForm(prev => ({
       ...prev,
       [field]: value,
@@ -209,12 +233,43 @@ export default function TableEditor() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Location
                 </label>
-                <input
-                  type="text"
-                  value={form.location}
-                  onChange={(e) => handleInputChange('location', e.target.value)}
+                <select
+                  value={form.location_id || ''}
+                  onChange={(e) => handleInputChange('location_id', e.target.value ? parseInt(e.target.value) : null)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="e.g., Main Dining, Patio, VIP Room"
+                >
+                  <option value="">No location assigned</option>
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Position X
+                </label>
+                <input
+                  type="number"
+                  value={form.position_x || ''}
+                  onChange={(e) => handleInputChange('position_x', e.target.value ? parseInt(e.target.value) : null)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="X coordinate"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Position Y
+                </label>
+                <input
+                  type="number"
+                  value={form.position_y || ''}
+                  onChange={(e) => handleInputChange('position_y', e.target.value ? parseInt(e.target.value) : null)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Y coordinate"
                 />
               </div>
 
