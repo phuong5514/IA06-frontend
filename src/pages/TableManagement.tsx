@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../config/api';
-import { Plus, Edit, Trash2, QrCode, Download, Search, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, QrCode, Download, Search, ChevronDown, Printer } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 
@@ -28,21 +28,97 @@ const TableManagement: React.FC = () => {
   const [sortBy, setSortBy] = useState<'table_number' | 'capacity' | 'created_at' | 'updated_at'>('table_number');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [printLayout, setPrintLayout] = useState<'single' | 'multiple'>('multiple');
+  const [selectedTablesForPrint, setSelectedTablesForPrint] = useState<number[]>([]);
+  const [qrImageUrls, setQrImageUrls] = useState<Record<number, string>>({});
 
   useEffect(() => {
     fetchTables();
   }, [searchTerm, statusFilter, locationFilter, sortBy, sortOrder]);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (showDownloadMenu && !(event.target as Element).closest('.relative')) {
-        setShowDownloadMenu(false);
-      }
-    };
+    if (showPrintPreview) {
+      // Get all tables with QR codes for printing
+      const tablesWithQR = tables.filter(table => table.qr_token);
+      setSelectedTablesForPrint(tablesWithQR.map(table => table.id));
+      loadQrImages(tablesWithQR);
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showDownloadMenu]);
+      // Add print styles to document head
+      const style = document.createElement('style');
+      style.id = 'print-styles';
+      style.textContent = `
+        @media print {
+
+
+          body * { display: none !important; }
+          .print-modal-header,
+          .print-modal-controls,
+          .print-modal-overlay { display: none !important; }
+          .print-preview-container,
+          .print-preview-container * {
+            display: block !important;
+          }
+          .print-preview-container {
+            visibility: visible;
+            background: white !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .qr-print-grid {
+            display: grid !important;
+            grid-template-columns: ${printLayout === 'multiple' ? 'repeat(2, 1fr)' : '1fr'} !important;
+            gap: 20px !important;
+            page-break-inside: avoid !important;
+          }
+          .qr-print-item {
+            display: block !important;
+            page-break-inside: avoid !important;
+            text-align: center !important;
+            padding: 20px !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 8px !important;
+            break-inside: avoid !important;
+          }
+          .qr-print-item.single {
+            max-width: 400px !important;
+            margin: 0 auto !important;
+          }
+        }
+        .qr-print-grid {
+          display: grid;
+          grid-template-columns: ${printLayout === 'multiple' ? 'repeat(2, 1fr)' : '1fr'};
+          gap: 20px;
+        }
+        .qr-print-item {
+          text-align: center;
+          padding: 20px;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+        }
+        .qr-print-item.single {
+          max-width: 400px;
+          margin: 0 auto;
+        }
+      `;
+      document.head.appendChild(style);
+
+      return () => {
+        const existingStyle = document.getElementById('print-styles');
+        if (existingStyle) {
+          document.head.removeChild(existingStyle);
+        }
+        // Clean up blob URLs
+        Object.values(qrImageUrls).forEach(url => {
+          if (url.startsWith('blob:')) {
+            URL.revokeObjectURL(url);
+          }
+        });
+        setQrImageUrls({});
+      };
+    }
+  }, [showPrintPreview, printLayout, tables]);
 
   const fetchTables = async () => {
     try {
@@ -155,6 +231,39 @@ const TableManagement: React.FC = () => {
     }
   };
 
+  const handlePrintPreview = () => {
+    // Get all tables with QR codes for printing
+    const tablesWithQR = tables.filter(table => table.qr_token);
+    setSelectedTablesForPrint(tablesWithQR.map(table => table.id));
+    loadQrImages(tablesWithQR);
+    setShowPrintPreview(true);
+    setShowDownloadMenu(false);
+  };
+
+  const loadQrImages = async (tablesWithQR: Table[]) => {
+    const imageUrls: Record<number, string> = {};
+
+    for (const table of tablesWithQR) {
+      try {
+        const response = await apiClient.get(`admin/tables/${table.id}/qr/image`, {
+          responseType: 'blob',
+        });
+        const blobUrl = URL.createObjectURL(response.data);
+        imageUrls[table.id] = blobUrl;
+      } catch (error) {
+        console.error(`Failed to load QR image for table ${table.id}:`, error);
+        // Fallback to direct URL if blob loading fails
+        imageUrls[table.id] = `${apiClient.defaults.baseURL}admin/tables/${table.id}/qr/image`;
+      }
+    }
+
+    setQrImageUrls(imageUrls);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   if (loading && tables.length === 0) {
     return (
       <DashboardLayout>
@@ -217,10 +326,17 @@ const TableManagement: React.FC = () => {
                   </button>
                   <button
                     onClick={handleDownloadCombinedPDF}
-                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100 flex items-center gap-2"
                   >
                     <Download size={14} />
                     Download Combined PDF
+                  </button>
+                  <button
+                    onClick={handlePrintPreview}
+                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <Printer size={14} />
+                    Print Preview
                   </button>
                 </div>
               )}
@@ -421,6 +537,86 @@ const TableManagement: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Print Preview Modal */}
+      {showPrintPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 print-modal-overlay">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b print-modal-header">
+              <h2 className="text-xl font-semibold text-gray-800">Print Preview - QR Codes</h2>
+              <button
+                onClick={() => setShowPrintPreview(false)}
+                className="text-gray-400 hover:text-gray-600 no-print"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4 print-modal-controls">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="printLayout"
+                      value="multiple"
+                      checked={printLayout === 'multiple'}
+                      onChange={(e) => setPrintLayout(e.target.value as 'single' | 'multiple')}
+                      className="text-indigo-600 no-print"
+                    />
+                    <span className="text-sm text-gray-700 no-print">Multiple QR codes per page</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="printLayout"
+                      value="single"
+                      checked={printLayout === 'single'}
+                      onChange={(e) => setPrintLayout(e.target.value as 'single' | 'multiple')}
+                      className="text-indigo-600 no-print"
+                    />
+                    <span className="text-sm text-gray-700 no-print">Single QR code per page</span>
+                  </label>
+                </div>
+                <button
+                  onClick={handlePrint}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-2 no-print"
+                >
+                  <Printer size={16} />
+                  Print
+                </button>
+              </div>
+
+              <div className="border rounded-lg p-4 bg-gray-50 print-preview-container max-h-96 overflow-y-auto">
+                <div className="qr-print-grid">
+                  {tables
+                    .filter(table => table.qr_token && selectedTablesForPrint.includes(table.id))
+                    .map(table => (
+                      <div key={table.id} className={`qr-print-item ${printLayout === 'single' ? 'single' : ''}`}>
+                        <h3 className="text-lg font-semibold mb-2">Table {table.table_number}</h3>
+                        <div className="mb-2">
+                          <img
+                            src={qrImageUrls[table.id] || `${apiClient.defaults.baseURL}admin/tables/${table.id}/qr/image`}
+                            alt={`QR Code for Table ${table.table_number}`}
+                            className="mx-auto border rounded"
+                            style={{ maxWidth: '200px', maxHeight: '200px' }}
+                          />
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          <p>Capacity: {table.capacity} seats</p>
+                          {table.location && <p>Location: {table.location}</p>}
+                          {table.description && <p>{table.description}</p>}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 };
