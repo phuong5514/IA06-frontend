@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiClient } from '../config/api';
 import { useNavigate, Link } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
@@ -25,6 +25,13 @@ interface MenuItem {
   updated_at?: string;
 }
 
+interface ApiResponse {
+  items: MenuItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export default function MenuItemsManagement() {
   const navigate = useNavigate();
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -34,28 +41,46 @@ export default function MenuItemsManagement() {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showUnavailable, setShowUnavailable] = useState(false);
+  const [sortBy, setSortBy] = useState<string>('display_order');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+  const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
     fetchData();
-  }, [selectedCategory, showUnavailable]);
+  }, [selectedCategory, showUnavailable, searchQuery, sortBy, sortOrder, currentPage, pageSize]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
 
+      const params = new URLSearchParams({
+        available_only: (!showUnavailable).toString(),
+        page: currentPage.toString(),
+        limit: pageSize.toString(),
+        sort_by: sortBy,
+        sort_order: sortOrder,
+      });
+
+      if (selectedCategory) {
+        params.append('category_id', selectedCategory.toString());
+      }
+
+      if (searchQuery.trim()) {
+        params.append('name', searchQuery.trim());
+      }
+
       const [categoriesResponse, itemsResponse] = await Promise.all([
         apiClient.get('/menu/categories'),
-        apiClient.get('/menu/items', {
-          params: {
-            category_id: selectedCategory || undefined,
-            available_only: !showUnavailable,
-          },
-        }),
+        apiClient.get(`/menu/items?${params.toString()}`),
       ]);
 
       setCategories(categoriesResponse.data.categories || []);
-      setItems(itemsResponse.data || []);
+      const responseData = itemsResponse.data as ApiResponse;
+      setItems(responseData.items || []);
+      setTotalItems(responseData.total || 0);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch menu items');
     } finally {
@@ -92,15 +117,24 @@ export default function MenuItemsManagement() {
     return category ? category.name : 'Unknown';
   };
 
-  const filteredItems = items.filter((item) => {
-    if (searchQuery) {
-      return (
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
     }
-    return true;
-  });
+    setCurrentPage(1); // Reset to first page when sorting changes
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1); // Reset to first page when page size changes
+  };
 
   if (loading && items.length === 0) {
     return (
@@ -158,7 +192,7 @@ export default function MenuItemsManagement() {
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Search */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -194,8 +228,25 @@ export default function MenuItemsManagement() {
               </select>
             </div>
 
+            {/* Sort By */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Sort By
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => handleSort(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="display_order">Display Order</option>
+                <option value="name">Name</option>
+                <option value="price">Price</option>
+                <option value="created_at">Creation Time</option>
+              </select>
+            </div>
+
             {/* Availability Filter */}
-            <div className="flex items-end">
+            <div className="flex items-end space-x-4">
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -203,14 +254,23 @@ export default function MenuItemsManagement() {
                   onChange={(e) => setShowUnavailable(e.target.checked)}
                   className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                 />
-                <span className="text-sm text-gray-700">Show unavailable items</span>
+                <span className="text-sm text-gray-700">Show unavailable</span>
               </label>
+              {sortBy !== 'display_order' && (
+                <button
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded"
+                  title={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                >
+                  {sortOrder === 'asc' ? '↑' : '↓'}
+                </button>
+              )}
             </div>
           </div>
         </div>
 
         {/* Items Grid */}
-        {filteredItems.length === 0 ? (
+        {items.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg shadow">
             <p className="text-gray-500">No menu items found</p>
             <button
@@ -221,121 +281,231 @@ export default function MenuItemsManagement() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredItems.map((item) => (
-              <div
-                key={item.id}
-                className={`bg-white rounded-lg shadow hover:shadow-lg transition-shadow ${
-                  item.status !== 'available' ? 'opacity-60' : ''
-                }`}
-              >
-                {/* Image */}
-                {item.image_url && (
-                  <img
-                    src={item.image_url}
-                    alt={item.name}
-                    className="w-full h-48 object-cover rounded-t-lg"
-                  />
-                )}
-
-                <div className="p-4">
-                  {/* Category Badge */}
-                  <span className="inline-block px-2 py-1 text-xs font-semibold text-indigo-600 bg-indigo-100 rounded mb-2">
-                    {getCategoryName(item.category_id)}
-                  </span>
-
-                  {/* Item Name */}
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                    {item.name}
-                  </h3>
-
-                  {/* Description */}
-                  {item.description && (
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                      {item.description}
-                    </p>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  className={`bg-white rounded-lg shadow hover:shadow-lg transition-shadow ${
+                    item.status !== 'available' ? 'opacity-60' : ''
+                  }`}
+                >
+                  {/* Image */}
+                  {item.image_url && (
+                    <img
+                      src={item.image_url}
+                      alt={item.name}
+                      className="w-full h-48 object-cover rounded-t-lg"
+                    />
                   )}
 
-                  {/* Price */}
-                  <p className="text-xl font-bold text-indigo-600 mb-3">
-                    ${parseFloat(item.price).toFixed(2)}
-                  </p>
-
-                  {/* Dietary Tags */}
-                  {item.dietary_tags && item.dietary_tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {item.dietary_tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded"
-                        >
-                          {tag}
+                  <div className="p-4">
+                    {/* Category Badge and Chef Recommendation */}
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="inline-block px-2 py-1 text-xs font-semibold text-indigo-600 bg-indigo-100 rounded">
+                        {getCategoryName(item.category_id)}
+                      </span>
+                      {item.chef_recommendation && (
+                        <span className="inline-block px-2 py-1 text-xs font-semibold text-yellow-800 bg-yellow-100 rounded">
+                          Chef's Choice
                         </span>
-                      ))}
+                      )}
                     </div>
-                  )}
 
-                  {/* Preparation Time and Chef Recommendation */}
-                  <div className="flex flex-wrap gap-2 mb-3">
+                    {/* Item Name */}
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                      {item.name}
+                    </h3>
+
+                    {/* Description */}
+                    {item.description && (
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                        {item.description}
+                      </p>
+                    )}
+
+                    {/* Price */}
+                    <p className="text-xl font-bold text-indigo-600 mb-3">
+                      ${parseFloat(item.price).toFixed(2)}
+                    </p>
+
+                    {/* Dietary Tags */}
+                    {item.dietary_tags && item.dietary_tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {item.dietary_tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Preparation Time */}
                     {item.preparation_time && (
-                      <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
-                        {item.preparation_time} min prep
-                      </span>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
+                          {item.preparation_time} min prep
+                        </span>
+                      </div>
                     )}
-                    {item.chef_recommendation && (
-                      <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">
-                        Chef's Choice
-                      </span>
-                    )}
-                  </div>
 
-                  {/* Status */}
-                  <div className="flex items-center mb-4">
-                    <span
-                      className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
-                        item.status === 'available'
-                          ? 'bg-green-100 text-green-800'
+                    {/* Status */}
+                    <div className="flex items-center mb-4">
+                      <span
+                        className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
+                          item.status === 'available'
+                            ? 'bg-green-100 text-green-800'
+                            : item.status === 'sold_out'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}
+                      >
+                        {item.status === 'available'
+                          ? 'Available'
                           : item.status === 'sold_out'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}
-                    >
-                      {item.status === 'available'
-                        ? 'Available'
-                        : item.status === 'sold_out'
-                        ? 'Sold Out'
-                        : 'Unavailable'}
-                    </span>
-                  </div>
+                          ? 'Sold Out'
+                          : 'Unavailable'}
+                      </span>
+                    </div>
 
-                  {/* Actions */}
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => navigate(`/admin/menu-editor?id=${item.id}`)}
-                      className="flex-1 bg-indigo-600 text-white px-3 py-2 rounded hover:bg-indigo-700 transition-colors text-sm"
-                    >
-                      Edit
-                    </button>
+                    {/* Actions */}
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => navigate(`/admin/menu-editor?id=${item.id}`)}
+                        className="flex-1 bg-indigo-600 text-white px-3 py-2 rounded hover:bg-indigo-700 transition-colors text-sm"
+                      >
+                        Edit
+                      </button>
+                      <select
+                        value={item.status}
+                        onChange={(e) => handleStatusChange(item.id, e.target.value as 'available' | 'unavailable' | 'sold_out')}
+                        className="flex-1 px-3 py-2 rounded transition-colors text-sm bg-white border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="available">Available</option>
+                        <option value="unavailable">Unavailable</option>
+                        <option value="sold_out">Sold Out</option>
+                      </select>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="px-3 py-2 bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-6 rounded-lg shadow">
+              <div className="flex-1 flex justify-between sm:hidden">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === Math.ceil(totalItems / pageSize)}
+                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing{' '}
+                    <span className="font-medium">
+                      {Math.min((currentPage - 1) * pageSize + 1, totalItems)}
+                    </span>{' '}
+                    to{' '}
+                    <span className="font-medium">
+                      {Math.min(currentPage * pageSize, totalItems)}
+                    </span>{' '}
+                    of{' '}
+                    <span className="font-medium">{totalItems}</span>{' '}
+                    results
+                  </p>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <label htmlFor="pageSize" className="text-sm text-gray-700">
+                      Show:
+                    </label>
                     <select
-                      value={item.status}
-                      onChange={(e) => handleStatusChange(item.id, e.target.value as 'available' | 'unavailable' | 'sold_out')}
-                      className="flex-1 px-3 py-2 rounded transition-colors text-sm bg-white border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      id="pageSize"
+                      value={pageSize}
+                      onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                      className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     >
-                      <option value="available">Available</option>
-                      <option value="unavailable">Unavailable</option>
-                      <option value="sold_out">Sold Out</option>
+                      <option value={6}>6</option>
+                      <option value={12}>12</option>
+                      <option value={24}>24</option>
+                      <option value={48}>48</option>
                     </select>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="px-3 py-2 bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors text-sm"
-                    >
-                      Delete
-                    </button>
+                  </div>
+                  <div>
+                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span className="sr-only">Previous</span>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      {Array.from({ length: Math.ceil(totalItems / pageSize) }, (_, i) => i + 1)
+                        .filter(page => {
+                          const totalPages = Math.ceil(totalItems / pageSize);
+                          if (totalPages <= 7) return true;
+                          if (page === 1 || page === totalPages) return true;
+                          if (Math.abs(page - currentPage) <= 1) return true;
+                          return false;
+                        })
+                        .map((page, index, array) => (
+                          <React.Fragment key={page}>
+                            {index > 0 && array[index - 1] !== page - 1 && (
+                              <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                                ...
+                              </span>
+                            )}
+                            <button
+                              onClick={() => handlePageChange(page)}
+                              className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                page === currentPage
+                                  ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                                  : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          </React.Fragment>
+                        ))}
+                      <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === Math.ceil(totalItems / pageSize)}
+                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span className="sr-only">Next</span>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </nav>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          </>
         )}
       </div>
     </DashboardLayout>
