@@ -285,28 +285,28 @@ export default function Cart() {
                     </div>
 
                     {/* Quantity and Price */}
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center gap-4">
                       <div className="flex items-center space-x-3">
                         <label className="text-sm font-medium text-gray-700">Qty:</label>
-                        <div className="flex items-center border border-gray-300 rounded-md">
+                        <div className="flex items-center border border-gray-300 rounded-md h-8">
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="px-3 py-1 text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                            className="px-2 h-full text-gray-600 hover:text-gray-800 hover:bg-gray-50 flex items-center justify-center"
                           >
                             -
                           </button>
-                          <span className="px-3 py-1 border-x border-gray-300 min-w-[3rem] text-center">
+                          <div className="px-2 h-full border-x border-gray-300 min-w-[2.5rem] flex items-center justify-center text-sm">
                             {item.quantity}
-                          </span>
+                          </div>
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="px-3 py-1 text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                            className="px-2 h-full text-gray-600 hover:text-gray-800 hover:bg-gray-50 flex items-center justify-center"
                           >
                             +
                           </button>
                         </div>
                       </div>
-                      <div className="text-lg font-bold text-green-600">
+                      <div className="text-lg font-bold text-green-600 whitespace-nowrap">
                         ${getItemPrice(item).toFixed(2)}
                       </div>
                     </div>
