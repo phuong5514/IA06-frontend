@@ -299,7 +299,7 @@ export default function WaiterOrders() {
                                   clipRule="evenodd"
                                 />
                               </svg>
-                              Accept & Confirm
+                              Accept Order
                             </>
                           )}
                         </button>
@@ -311,36 +311,6 @@ export default function WaiterOrders() {
                           Reject Order
                         </button>
                       </>
-                    )}
-
-                    {order.status === 'confirmed' && (
-                      <button
-                        onClick={() => handleUpdateStatus(order.id, 'preparing')}
-                        disabled={processingOrders.has(order.id)}
-                        className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Send to Kitchen
-                      </button>
-                    )}
-
-                    {order.status === 'preparing' && (
-                      <button
-                        onClick={() => handleUpdateStatus(order.id, 'ready')}
-                        disabled={processingOrders.has(order.id)}
-                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Mark as Ready
-                      </button>
-                    )}
-
-                    {order.status === 'ready' && (
-                      <button
-                        onClick={() => handleUpdateStatus(order.id, 'delivered')}
-                        disabled={processingOrders.has(order.id)}
-                        className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Mark as Delivered
-                      </button>
                     )}
 
                     <button

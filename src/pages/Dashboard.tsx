@@ -121,6 +121,23 @@ export default function Dashboard() {
               </div>
             )}
 
+            {(user?.role === 'kitchen' || user?.role === 'admin' || user?.role === 'super_admin') && (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-purple-800 mb-4">
+                  👨‍🍳 Kitchen Display System
+                </h3>
+                <p className="text-purple-700 mb-4">
+                  View orders in preparation, mark them as ready, and manage the kitchen workflow.
+                </p>
+                <button
+                  onClick={() => navigate('/kitchen/display')}
+                  className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium w-full md:w-auto"
+                >
+                  Open Kitchen Display
+                </button>
+              </div>
+            )}
+
             {/* <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-blue-800 mb-2">
                 Token Management
