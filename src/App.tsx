@@ -28,6 +28,7 @@ import CustomerProfile from './pages/CustomerProfile';
 import Cart from './pages/Cart';
 import OrderTracking from './pages/OrderTracking';
 import Orders from './pages/Orders';
+import WaiterOrders from './pages/WaiterOrders';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -186,6 +187,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Orders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/waiter/orders"
+              element={
+                <ProtectedRoute requiredRoles={['waiter', 'admin', 'super_admin']}>
+                  <WaiterOrders />
                 </ProtectedRoute>
               }
             />

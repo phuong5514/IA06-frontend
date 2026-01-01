@@ -59,8 +59,14 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
     setIsMenuOpen(false);
   };
 
-  // Don't show header on dashboard pages (they have their own layout) or home page (uses layered navigation)
-  if (location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/admin/') || location.pathname === '/') {
+  // Don't show header on dashboard pages (they have their own layout), home page, or for staff roles
+  if (
+    location.pathname.startsWith('/dashboard') || 
+    location.pathname.startsWith('/admin/') || 
+    location.pathname.startsWith('/waiter/') ||
+    location.pathname.startsWith('/kitchen/') ||
+    location.pathname === '/'
+  ) {
     return null;
   }
 
@@ -151,6 +157,14 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
                     className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
                   >
                     Dashboard
+                  </button>
+                )}
+                {(user?.role === 'waiter' || user?.role === 'admin' || user?.role === 'super_admin') && (
+                  <button
+                    onClick={() => { navigate('/waiter/orders'); setIsMenuOpen(false); }}
+                    className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+                  >
+                    🍽️ Orders
                   </button>
                 )}
                 <button
