@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import menuBackground from '../assets/menu_background.png';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -92,10 +93,12 @@ export default function MenuCustomer() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 pt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-lg">Loading menu...</div>
+      <div className="min-h-screen bg-cover bg-center bg-no-repeat pt-16" style={{ backgroundImage: `url(${menuBackground})` }}>
+        <div className="min-h-screen bg-black/40 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="flex items-center justify-center py-12">
+              <div className="text-lg text-white font-semibold">Loading menu...</div>
+            </div>
           </div>
         </div>
       </div>
@@ -104,10 +107,12 @@ export default function MenuCustomer() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 pt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-red-600">{error}</div>
+      <div className="min-h-screen bg-cover bg-center bg-no-repeat pt-16" style={{ backgroundImage: `url(${menuBackground})` }}>
+        <div className="min-h-screen bg-black/40 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="flex items-center justify-center py-12">
+              <div className="text-red-600 bg-white px-6 py-4 rounded-lg shadow-lg">{error}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -115,15 +120,18 @@ export default function MenuCustomer() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 pt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header with Profile Link */}
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Our Menu</h1>
-        </div>
+    <div className="min-h-screen bg-cover bg-center bg-fixed bg-no-repeat pt-16" style={{ backgroundImage: `url(${menuBackground})` }}>
+      <div className="min-h-screen bg-gradient-to-b from-black/50 via-black/40 to-black/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Header with Profile Link */}
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold text-white drop-shadow-lg">Our Menu</h1>
+          </div>
 
+          {/* Frosted Glass Container */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-6 border border-white/20">
         {/* Search and Filter */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Search */}
             <div>
@@ -205,7 +213,7 @@ export default function MenuCustomer() {
         {/* Menu Items Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map(item => (
-            <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div key={item.id} className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl overflow-hidden border border-white/30">
               {item.image_url && (
                 <img
                   src={item.image_url}
@@ -268,11 +276,14 @@ export default function MenuCustomer() {
         </div>
 
         {filteredItems.length === 0 && (
-          <div className="text-center text-gray-500">
+          <div className="text-center text-white bg-white/10 backdrop-blur-sm px-6 py-8 rounded-lg">
             No menu items found matching your criteria.
           </div>
         )}
+          </div>
+          {/* End Frosted Glass Container */}
       </div>
+    </div>
     </div>
   );
 }

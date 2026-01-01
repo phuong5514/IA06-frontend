@@ -46,19 +46,46 @@ interface SelectedModifiers {
 export default function MenuItemDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { addItem } = useCart();
+  const { addItem, items, removeItem, updateItem } = useCart();
   const [item, setItem] = useState<MenuItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedModifiers, setSelectedModifiers] = useState<SelectedModifiers>({});
   const [quantity, setQuantity] = useState(1);
   const [specialInstructions, setSpecialInstructions] = useState('');
+  
+  // Get edit mode from URL params
+  const [searchParams] = useState(() => new URLSearchParams(window.location.search));
+  const editCartItemId = searchParams.get('edit');
+  const isEditMode = !!editCartItemId;
+  const cartItemToEdit = isEditMode ? items.find(item => item.id === editCartItemId) : null;
 
   useEffect(() => {
     if (id) {
       fetchItem(parseInt(id));
     }
   }, [id]);
+
+  // Load cart item data when in edit mode
+  useEffect(() => {
+    if (cartItemToEdit && item) {
+      // Set quantity
+      setQuantity(cartItemToEdit.quantity);
+      
+      // Set special instructions
+      setSpecialInstructions(cartItemToEdit.specialInstructions || '');
+      
+      // Set selected modifiers
+      const modifiers: SelectedModifiers = {};
+      cartItemToEdit.modifiers.forEach(mod => {
+        if (!modifiers[mod.groupId]) {
+          modifiers[mod.groupId] = [];
+        }
+        modifiers[mod.groupId].push(mod.optionId);
+      });
+      setSelectedModifiers(modifiers);
+    }
+  }, [cartItemToEdit, item]);
 
   const fetchItem = async (itemId: number) => {
     try {
@@ -138,8 +165,7 @@ export default function MenuItemDetail() {
       });
     });
 
-    // Add item to cart
-    addItem({
+    const itemData = {
       menuItemId: item.id,
       name: item.name,
       price: parseFloat(item.price),
@@ -147,10 +173,19 @@ export default function MenuItemDetail() {
       image_url: item.image_url,
       modifiers: cartModifiers,
       specialInstructions: specialInstructions.trim() || undefined,
-    });
+    };
 
-    // Show success message and redirect to cart
-    alert('Item added to cart!');
+    if (isEditMode && editCartItemId) {
+      // Update existing item
+      updateItem(editCartItemId, itemData);
+      alert('Order updated successfully!');
+    } else {
+      // Add new item to cart
+      addItem(itemData);
+      alert('Item added to cart!');
+    }
+
+    // Redirect to cart
     navigate('/cart');
   };
 
@@ -342,7 +377,9 @@ export default function MenuItemDetail() {
                 disabled={item.status !== 'available'}
                 className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >
-                {item.status === 'available' ? 'Add to Order' : 'Currently Unavailable'}
+                {item.status === 'available' 
+                  ? (isEditMode ? 'Update Order' : 'Add to Order')
+                  : 'Currently Unavailable'}
               </button>
             </div>
           </div>
