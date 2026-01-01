@@ -23,6 +23,7 @@ import MenuItemsManagement from './pages/MenuItemsManagement';
 import StaffManagement from './pages/StaffManagement';
 import TableManagement from './pages/TableManagement';
 import TableEditor from './pages/TableEditor';
+import CustomerProfile from './pages/CustomerProfile';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -74,7 +75,7 @@ function App() {
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
                   <Dashboard />
                 </ProtectedRoute>
               }
@@ -140,6 +141,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MenuCustomer />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <CustomerProfile />
                 </ProtectedRoute>
               }
             />

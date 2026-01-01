@@ -26,8 +26,12 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   if (requiredRoles && requiredRoles.length > 0) {
     const userRole = user?.role;
     if (!userRole || !requiredRoles.includes(userRole)) {
-      // User doesn't have required role, redirect to dashboard or home
-      return <Navigate to="/dashboard" replace />;
+      // User doesn't have required role, redirect to appropriate page
+      if (userRole === 'customer' || !userRole) {
+        return <Navigate to="/menu/customer" replace />;
+      } else {
+        return <Navigate to="/dashboard" replace />;
+      }
     }
   }
 

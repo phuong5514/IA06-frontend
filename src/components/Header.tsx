@@ -37,8 +37,13 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
     setIsMenuOpen(false);
   };
 
+  const goToProfile = () => {
+    navigate('/profile');
+    setIsMenuOpen(false);
+  };
+
   const goToMenu = () => {
-    navigate('/menu');
+    navigate('/menu/customer');
     setIsMenuOpen(false);
   };
 
@@ -94,12 +99,19 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
             ) : isAuthenticated ? (
               <>
                 <button
-                  onClick={goToDashboard}
+                  onClick={goToProfile}
                   className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
                 >
-                  Dashboard
+                  Welcome, {user?.email}
                 </button>
-                <span className="text-gray-700">Welcome, {user?.email}</span>
+                {(user?.role === 'admin' || user?.role === 'super_admin') && (
+                  <button
+                    onClick={goToDashboard}
+                    className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+                  >
+                    Dashboard
+                  </button>
+                )}
                 <button
                   onClick={handleLogout}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition"
@@ -174,11 +186,25 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
             ) : isAuthenticated ? (
               <>
                 <button
-                  onClick={goToDashboard}
+                  onClick={goToMenu}
                   className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
                 >
-                  Dashboard
+                  Menu
                 </button>
+                <button
+                  onClick={goToProfile}
+                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+                >
+                  Profile
+                </button>
+                {(user?.role === 'admin' || user?.role === 'super_admin') && (
+                  <button
+                    onClick={goToDashboard}
+                    className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+                  >
+                    Dashboard
+                  </button>
+                )}
                 <div className="px-4 py-2 text-gray-600">
                   {user?.email}
                 </div>
