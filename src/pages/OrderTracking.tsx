@@ -8,6 +8,8 @@ interface OrderItem {
   menu_item_id: number;
   menu_item_name: string;
   quantity: number;
+  base_price: string;
+  unit_price: string;
   price: string;
   special_instructions?: string;
   modifiers?: Array<{
@@ -53,6 +55,7 @@ export default function OrderTracking() {
       setLoading(true);
       setError(null);
       const response = await apiClient.get(`/orders/${id}`);
+      console.log('Order data received:', response.data);
       setOrder(response.data);
     } catch (err: any) {
       console.error('Failed to fetch order:', err);
@@ -235,30 +238,52 @@ export default function OrderTracking() {
                     <h3 className="font-medium text-gray-900">
                       {item.quantity}x {item.menu_item_name}
                     </h3>
-                    {item.modifiers && item.modifiers.length > 0 && (
-                      <div className="mt-1 space-y-1">
-                        {item.modifiers.map((mod, idx) => (
-                          <div key={idx} className="text-sm text-gray-600 flex justify-between">
-                            <span>• {mod.modifier_option_name}</span>
-                            {parseFloat(mod.price_adjustment) !== 0 && (
-                              <span className="text-green-600">
+                    
+                    {/* Price Breakdown */}
+                    <div className="mt-2 text-sm space-y-1">
+                      <div className="flex justify-between text-gray-600">
+                        <span>Base price:</span>
+                        <span>${parseFloat(item.base_price).toFixed(2)}</span>
+                      </div>
+                      
+                      {item.modifiers && item.modifiers.length > 0 && (
+                        <div className="space-y-1">
+                          {item.modifiers.map((mod, idx) => (
+                            <div key={idx} className="flex justify-between text-gray-600">
+                              <span className="pl-2">+ {mod.modifier_option_name}:</span>
+                              <span className={parseFloat(mod.price_adjustment) >= 0 ? 'text-green-600' : 'text-red-600'}>
                                 {parseFloat(mod.price_adjustment) > 0 ? '+' : ''}
                                 ${parseFloat(mod.price_adjustment).toFixed(2)}
                               </span>
-                            )}
-                          </div>
-                        ))}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between font-medium text-gray-700 pt-1 border-t border-gray-200">
+                        <span>Subtotal per item:</span>
+                        <span>${parseFloat(item.unit_price).toFixed(2)}</span>
                       </div>
-                    )}
+                      
+                      {item.quantity > 1 && (
+                        <div className="flex justify-between text-gray-600">
+                          <span>Quantity: {item.quantity}</span>
+                        </div>
+                      )}
+                    </div>
+                    
                     {item.special_instructions && (
-                      <div className="mt-1 text-sm text-gray-600 italic">
-                        Note: {item.special_instructions}
+                      <div className="mt-2 text-sm text-gray-600 italic bg-gray-50 p-2 rounded">
+                        <span className="font-medium">Note:</span> {item.special_instructions}
                       </div>
                     )}
                   </div>
                   <div className="text-right ml-4">
-                    <div className="font-semibold text-green-600">
+                    <div className="text-lg font-bold text-green-600">
                       ${parseFloat(item.price).toFixed(2)}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Total
                     </div>
                   </div>
                 </div>
