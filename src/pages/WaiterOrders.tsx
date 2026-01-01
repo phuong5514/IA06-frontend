@@ -313,6 +313,16 @@ export default function WaiterOrders() {
                       </>
                     )}
 
+                    {order.status === 'ready' && (
+                      <button
+                        onClick={() => handleUpdateStatus(order.id, 'delivered')}
+                        disabled={processingOrders.has(order.id)}
+                        className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {processingOrders.has(order.id) ? 'Processing...' : '📦 Mark as Delivered'}
+                      </button>
+                    )}
+
                     <button
                       onClick={() => navigate(`/orders/${order.id}`)}
                       className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors"

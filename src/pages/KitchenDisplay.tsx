@@ -149,7 +149,6 @@ export default function KitchenDisplay() {
           {[
             { value: 'preparing', label: 'Preparing', icon: '🔥' },
             { value: 'ready', label: 'Ready', icon: '✅' },
-            { value: 'delivered', label: 'Delivered', icon: '📦' },
           ].map((tab) => (
             <button
               key={tab.value}
@@ -298,16 +297,6 @@ export default function KitchenDisplay() {
                           className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-bold text-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                         >
                           {processingOrders.has(order.id) ? 'Processing...' : '✅ Mark as Ready'}
-                        </button>
-                      )}
-
-                      {order.status === 'ready' && (
-                        <button
-                          onClick={() => handleUpdateStatus(order.id, 'delivered')}
-                          disabled={processingOrders.has(order.id)}
-                          className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-bold text-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {processingOrders.has(order.id) ? 'Processing...' : '📦 Mark as Delivered'}
                         </button>
                       )}
 
