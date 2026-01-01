@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -32,6 +33,20 @@ export default function MenuCustomer() {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const { addItem } = useCart();
+
+  const handleQuickAdd = (item: MenuItem) => {
+    addItem({
+      menuItemId: item.id,
+      name: item.name,
+      price: parseFloat(item.price),
+      quantity: 1,
+      image_url: item.image_url,
+      modifiers: [],
+      specialInstructions: undefined,
+    });
+    alert('Item added to cart!');
+  };
 
   useEffect(() => {
     fetchMenu();
@@ -234,8 +249,11 @@ export default function MenuCustomer() {
                   )}
                 </div>
                 <div className="flex flex-col space-y-2">
-                  <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
-                    Add to Order
+                  <button 
+                    onClick={() => handleQuickAdd(item)}
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Quick Add
                   </button>
                   <button
                     onClick={() => navigate(`/menu/item/${item.id}`)}

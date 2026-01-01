@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '../config/api';
 import { API_ENDPOINTS } from '../config/api';
+import { useCart } from '../context/CartContext';
+import type { CartModifier } from '../context/CartContext';
 
 interface MenuItem {
   id: number;
@@ -44,11 +46,13 @@ interface SelectedModifiers {
 export default function MenuItemDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { addItem } = useCart();
   const [item, setItem] = useState<MenuItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedModifiers, setSelectedModifiers] = useState<SelectedModifiers>({});
   const [quantity, setQuantity] = useState(1);
+  const [specialInstructions, setSpecialInstructions] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -104,8 +108,50 @@ export default function MenuItemDetail() {
   };
 
   const handleOrder = () => {
-    // TODO: Implement order functionality
-    alert('Order functionality not implemented yet');
+    if (!item) return;
+
+    // Check if all required modifiers are selected
+    const missingRequired = item.modifiers?.find(
+      group => group.is_required && (!selectedModifiers[group.id] || selectedModifiers[group.id].length === 0)
+    );
+
+    if (missingRequired) {
+      alert(`Please select an option for ${missingRequired.name}`);
+      return;
+    }
+
+    // Build cart modifiers array
+    const cartModifiers: CartModifier[] = [];
+    item.modifiers?.forEach(group => {
+      const selectedOptions = selectedModifiers[group.id] || [];
+      selectedOptions.forEach(optionId => {
+        const option = group.options.find(opt => opt.id === optionId);
+        if (option) {
+          cartModifiers.push({
+            groupId: group.id,
+            groupName: group.name,
+            optionId: option.id,
+            optionName: option.name,
+            priceAdjustment: parseFloat(option.price_adjustment),
+          });
+        }
+      });
+    });
+
+    // Add item to cart
+    addItem({
+      menuItemId: item.id,
+      name: item.name,
+      price: parseFloat(item.price),
+      quantity,
+      image_url: item.image_url,
+      modifiers: cartModifiers,
+      specialInstructions: specialInstructions.trim() || undefined,
+    });
+
+    // Show success message and redirect to cart
+    alert('Item added to cart!');
+    navigate('/cart');
   };
 
   if (loading) {
@@ -249,6 +295,18 @@ export default function MenuItemDetail() {
                 ))}
               </div>
             )}
+
+            {/* Special Instructions */}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-3">Special Instructions</h2>
+              <textarea
+                value={specialInstructions}
+                onChange={(e) => setSpecialInstructions(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Any special requests? (e.g., no onions, extra sauce)"
+                rows={3}
+              />
+            </div>
 
             {/* Quantity and Order */}
             <div className="border-t pt-6">

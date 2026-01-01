@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import logo from '../assets/logo.png';
 
 
@@ -14,6 +15,7 @@ type HeaderProps = {
 function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, logout, isAuthenticated } = useAuth();
+  const { getTotalItems } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -44,6 +46,16 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
 
   const goToMenu = () => {
     navigate('/menu/customer');
+    setIsMenuOpen(false);
+  };
+
+  const goToCart = () => {
+    navigate('/cart');
+    setIsMenuOpen(false);
+  };
+
+  const goToOrders = () => {
+    navigate('/orders');
     setIsMenuOpen(false);
   };
 
@@ -81,6 +93,35 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
             >
               Menu
             </button>
+            {isAuthenticated && (
+              <button
+                onClick={goToCart}
+                className="relative px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+                title="View Cart"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                {getTotalItems() > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    {getTotalItems()}
+                  </span>
+                )}
+              </button>
+            )}
+            {isAuthenticated && (
+              <button
+                onClick={goToOrders}
+                className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+              >
+                My Orders
+              </button>
+            )}
             {!isAuthenticated && showAuthButtons ? (
               <>
                 <button
@@ -162,6 +203,27 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
             >
               Menu
             </button>
+            {isAuthenticated && (
+              <button
+                onClick={goToCart}
+                className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition flex items-center justify-between"
+              >
+                <span>Cart</span>
+                {getTotalItems() > 0 && (
+                  <span className="bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    {getTotalItems()}
+                  </span>
+                )}
+              </button>
+            )}
+            {isAuthenticated && (
+              <button
+                onClick={goToOrders}
+                className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+              >
+                My Orders
+              </button>
+            )}
             {!isAuthenticated && showAuthButtons ? (
               <>
                 <button
