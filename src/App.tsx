@@ -17,12 +17,12 @@ import QRLanding from './pages/QRLanding';
 import MenuCategoriesAdmin from './pages/MenuCategoriesAdmin';
 import MenuBulkOps from './pages/MenuBulkOps';
 import MenuCustomer from './pages/MenuCustomer';
-import GuestMenu from './pages/GuestMenu';
 import MenuItemEditor from './pages/MenuItemEditor';
 import MenuItemsManagement from './pages/MenuItemsManagement';
 import StaffManagement from './pages/StaffManagement';
 import TableManagement from './pages/TableManagement';
 import TableEditor from './pages/TableEditor';
+import MenuItemDetail from './pages/MenuItemDetail';
 import CustomerProfile from './pages/CustomerProfile';
 
 function App() {
@@ -145,6 +145,14 @@ function App() {
               }
             />
             <Route
+              path="/menu/item/:id"
+              element={
+                <ProtectedRoute>
+                  <MenuItemDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/profile"
               element={
                 <ProtectedRoute>
@@ -152,7 +160,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/menu" element={<GuestMenu />} />
+            <Route path="/menu" element={<MenuCustomer />} />
+            <Route path="/menu/item/:id" element={<MenuItemDetail />} />
           </Routes>
         </AuthProvider>
       </BrowserRouter>

@@ -119,6 +119,7 @@ export const API_ENDPOINTS = {
   REFRESH: '/user/refresh',
   LOGOUT: '/user/logout',
   ME: '/user/me',
+  MENU_ITEM: (id: number) => `/menu/items/${id}`,
 };
 
 export default API_BASE_URL;

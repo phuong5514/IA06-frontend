@@ -233,9 +233,17 @@ export default function MenuCustomer() {
                     </span>
                   )}
                 </div>
-                <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
-                  Add to Order
-                </button>
+                <div className="flex flex-col space-y-2">
+                  <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
+                    Add to Order
+                  </button>
+                  <button
+                    onClick={() => navigate(`/menu/item/${item.id}`)}
+                    className="w-full bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    View Details
+                  </button>
+                </div>
               </div>
             </div>
           ))}
