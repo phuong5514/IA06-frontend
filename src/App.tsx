@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './config/queryClient';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { WebSocketProvider } from './context/WebSocketContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Header from './components/Header';
 import AuthModal from './components/AuthModal';
@@ -53,9 +54,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <CartProvider>
-            <Header onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
-            <Routes>
+          <WebSocketProvider>
+            <CartProvider>
+              <Header onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
+              <Routes>
             <Route
               path="/"
               element={
@@ -211,6 +213,7 @@ function App() {
             <Route path="/menu/item/:id" element={<MenuItemDetail />} />
           </Routes>
           </CartProvider>
+          </WebSocketProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

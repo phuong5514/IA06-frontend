@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import { useWebSocket } from '../context/WebSocketContext';
 
 interface OrderItem {
   id: number;
@@ -34,24 +35,12 @@ export default function OrderTracking() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { onOrderStatusChange, onOrderAccepted, onOrderRejected, isConnected } = useWebSocket();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/');
-      return;
-    }
-    if (orderId) {
-      fetchOrder(orderId);
-      // Poll for updates every 10 seconds
-      const interval = setInterval(() => fetchOrder(orderId), 10000);
-      return () => clearInterval(interval);
-    }
-  }, [orderId, isAuthenticated]);
-
-  const fetchOrder = async (id: string) => {
+  const fetchOrder = useCallback(async (id: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -64,7 +53,51 @@ export default function OrderTracking() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/');
+      return;
+    }
+    if (orderId) {
+      fetchOrder(orderId);
+    }
+  }, [orderId, isAuthenticated, fetchOrder, navigate]);
+
+  // WebSocket event listeners for real-time updates
+  useEffect(() => {
+    if (!orderId) return;
+
+    const unsubscribeStatusChange = onOrderStatusChange((updatedOrder) => {
+      // Only update if it's the current order being viewed
+      if (updatedOrder.id === parseInt(orderId)) {
+        console.log('Order status updated:', updatedOrder);
+        // Fetch the full order data to ensure type consistency
+        fetchOrder(orderId);
+      }
+    });
+
+    const unsubscribeAccepted = onOrderAccepted((updatedOrder) => {
+      if (updatedOrder.id === parseInt(orderId)) {
+        console.log('Order accepted:', updatedOrder);
+        fetchOrder(orderId);
+      }
+    });
+
+    const unsubscribeRejected = onOrderRejected((updatedOrder) => {
+      if (updatedOrder.id === parseInt(orderId)) {
+        console.log('Order rejected:', updatedOrder);
+        fetchOrder(orderId);
+      }
+    });
+
+    return () => {
+      unsubscribeStatusChange();
+      unsubscribeAccepted();
+      unsubscribeRejected();
+    };
+  }, [orderId, onOrderStatusChange, onOrderAccepted, onOrderRejected, fetchOrder]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -167,10 +200,21 @@ export default function OrderTracking() {
             </svg>
             Back to Menu
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">Order #{order.id}</h1>
-          <p className="text-gray-600 mt-2">
-            Placed on {new Date(order.created_at).toLocaleString()}
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Order #{order.id}</h1>
+              <p className="text-gray-600 mt-2">
+                Placed on {new Date(order.created_at).toLocaleString()}
+              </p>
+            </div>
+            {/* Connection Status Indicator */}
+            <div className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-yellow-500'}`} />
+              <span className="text-sm text-gray-600">
+                {isConnected ? 'Live Updates' : 'Connecting...'}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Status Badge */}

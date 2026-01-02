@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import { useWebSocket } from '../context/WebSocketContext';
 import DashboardLayout from '../components/DashboardLayout';
 
 interface OrderItem {
@@ -36,11 +37,27 @@ interface KitchenOrder {
 export default function KitchenDisplay() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
+  const { onNewOrder, onOrderStatusChange, onOrderAccepted, isConnected } = useWebSocket();
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('preparing');
   const [processingOrders, setProcessingOrders] = useState<Set<number>>(new Set());
+
+  const fetchOrders = useCallback(async () => {
+    try {
+      setError(null);
+      const response = await apiClient.get('/orders/kitchen/all', {
+        params: { status: statusFilter },
+      });
+      setOrders(response.data.orders || []);
+    } catch (err: any) {
+      console.error('Failed to fetch orders:', err);
+      setError(err.response?.data?.message || 'Failed to load orders');
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -55,25 +72,31 @@ export default function KitchenDisplay() {
     }
 
     fetchOrders();
-    // Poll for new orders every 3 seconds
-    const interval = setInterval(fetchOrders, 3000);
-    return () => clearInterval(interval);
-  }, [isAuthenticated, user, statusFilter]);
+  }, [isAuthenticated, user, statusFilter, fetchOrders, navigate]);
 
-  const fetchOrders = async () => {
-    try {
-      setError(null);
-      const response = await apiClient.get('/orders/waiter/all', {
-        params: { status: statusFilter },
-      });
-      setOrders(response.data.orders || []);
-    } catch (err: any) {
-      console.error('Failed to fetch orders:', err);
-      setError(err.response?.data?.message || 'Failed to load orders');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // WebSocket event listeners
+  useEffect(() => {
+    const unsubscribeNewOrder = onNewOrder((order) => {
+      console.log('New order received in kitchen:', order);
+      fetchOrders();
+    });
+
+    const unsubscribeStatusChange = onOrderStatusChange((order) => {
+      console.log('Order status changed in kitchen:', order);
+      fetchOrders();
+    });
+
+    const unsubscribeAccepted = onOrderAccepted((order) => {
+      console.log('Order accepted (kitchen view):', order);
+      fetchOrders();
+    });
+
+    return () => {
+      unsubscribeNewOrder();
+      unsubscribeStatusChange();
+      unsubscribeAccepted();
+    };
+  }, [onNewOrder, onOrderStatusChange, onOrderAccepted, fetchOrders]);
 
   const handleUpdateStatus = async (orderId: number, newStatus: string) => {
     try {
@@ -105,17 +128,6 @@ export default function KitchenDisplay() {
     }
   };
 
-  const getTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (seconds < 60) return 'Just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hr ago`;
-    return `${Math.floor(seconds / 86400)} days ago`;
-  };
-
   const getTimeSinceOrder = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -140,8 +152,19 @@ export default function KitchenDisplay() {
       <div className="p-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Kitchen Display System</h1>
-          <p className="text-gray-600">View and manage orders in preparation</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Kitchen Display System</h1>
+              <p className="text-gray-600">View and manage orders in preparation</p>
+            </div>
+            {/* Connection Status Indicator */}
+            <div className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className="text-sm text-gray-600">
+                {isConnected ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Status Filter Tabs */}
