@@ -18,12 +18,13 @@ interface WaiterOrder {
     email: string;
     name?: string;
   };
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  status: 'pending' | 'accepted' | 'rejected' | 'preparing' | 'ready' | 'served' | 'completed' | 'cancelled';
   total_amount: string;
   created_at: string;
   updated_at: string;
   items_count: number;
   items: OrderItem[];
+  rejection_reason?: string;
 }
 
 export default function WaiterOrders() {
@@ -126,13 +127,17 @@ export default function WaiterOrders() {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'confirmed':
+      case 'accepted':
         return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'rejected':
+        return 'bg-red-100 text-red-800 border-red-300';
       case 'preparing':
         return 'bg-purple-100 text-purple-800 border-purple-300';
       case 'ready':
         return 'bg-green-100 text-green-800 border-green-300';
-      case 'delivered':
+      case 'served':
+        return 'bg-teal-100 text-teal-800 border-teal-300';
+      case 'completed':
         return 'bg-gray-100 text-gray-800 border-gray-300';
       case 'cancelled':
         return 'bg-red-100 text-red-800 border-red-300';
@@ -173,7 +178,7 @@ export default function WaiterOrders() {
         {/* Status Filter */}
         <div className="bg-white rounded-xl shadow-md p-4 mb-6">
           <div className="flex flex-wrap gap-2">
-            {['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled', 'all'].map((status) => (
+            {['pending', 'accepted', 'rejected', 'preparing', 'ready', 'served', 'completed', 'cancelled', 'all'].map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
@@ -315,11 +320,11 @@ export default function WaiterOrders() {
 
                     {order.status === 'ready' && (
                       <button
-                        onClick={() => handleUpdateStatus(order.id, 'delivered')}
+                        onClick={() => handleUpdateStatus(order.id, 'served')}
                         disabled={processingOrders.has(order.id)}
                         className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                       >
-                        {processingOrders.has(order.id) ? 'Processing...' : '📦 Mark as Delivered'}
+                        {processingOrders.has(order.id) ? 'Processing...' : '📦 Mark as Served'}
                       </button>
                     )}
 

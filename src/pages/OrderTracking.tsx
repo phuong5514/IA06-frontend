@@ -22,11 +22,12 @@ interface OrderItem {
 interface Order {
   id: number;
   user_id: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  status: 'pending' | 'accepted' | 'rejected' | 'preparing' | 'ready' | 'served' | 'completed' | 'cancelled';
   total_amount: string;
   created_at: string;
   updated_at: string;
   items: OrderItem[];
+  rejection_reason?: string;
 }
 
 export default function OrderTracking() {
@@ -69,13 +70,17 @@ export default function OrderTracking() {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
-      case 'confirmed':
+      case 'accepted':
         return 'bg-blue-100 text-blue-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
       case 'preparing':
         return 'bg-purple-100 text-purple-800';
       case 'ready':
         return 'bg-green-100 text-green-800';
-      case 'delivered':
+      case 'served':
+        return 'bg-teal-100 text-teal-800';
+      case 'completed':
         return 'bg-gray-100 text-gray-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
@@ -92,18 +97,28 @@ export default function OrderTracking() {
       active?: boolean;
     }> = [
       { key: 'pending', label: 'Order Placed' },
-      { key: 'confirmed', label: 'Confirmed' },
+      { key: 'accepted', label: 'Accepted' },
       { key: 'preparing', label: 'Preparing' },
       { key: 'ready', label: 'Ready' },
-      { key: 'delivered', label: 'Delivered' },
+      { key: 'served', label: 'Served' },
+      { key: 'completed', label: 'Completed' },
     ];
 
     if (!order) return steps;
 
+    // Handle rejected and cancelled statuses separately
+    if (order.status === 'rejected' || order.status === 'cancelled') {
+      return steps.map(step => ({
+        ...step,
+        completed: false,
+        active: false,
+      }));
+    }
+
     const currentIndex = steps.findIndex(s => s.key === order.status);
     return steps.map((step, index) => ({
       ...step,
-      completed: index <= currentIndex && order.status !== 'cancelled',
+      completed: index <= currentIndex,
       active: step.key === order.status,
     }));
   };
@@ -171,8 +186,18 @@ export default function OrderTracking() {
             </span>
           </div>
 
+          {/* Rejection Reason */}
+          {order.status === 'rejected' && order.rejection_reason && (
+            <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-red-800 mb-1">Order Rejected</h3>
+              <p className="text-sm text-red-700">
+                <span className="font-medium">Reason:</span> {order.rejection_reason}
+              </p>
+            </div>
+          )}
+
           {/* Status Timeline */}
-          {order.status !== 'cancelled' && (
+          {order.status !== 'cancelled' && order.status !== 'rejected' && (
             <div className="relative">
               <div className="flex justify-between items-center">
                 {getStatusSteps().map((step, index) => (

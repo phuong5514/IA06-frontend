@@ -25,7 +25,7 @@ interface KitchenOrder {
     name?: string;
   };
   table_id?: number;
-  status: 'preparing' | 'ready' | 'delivered';
+  status: 'accepted' | 'preparing' | 'ready' | 'served';
   total_amount: string;
   created_at: string;
   updated_at: string;
@@ -98,8 +98,8 @@ export default function KitchenDisplay() {
         return 'bg-purple-100 text-purple-800 border-purple-300';
       case 'ready':
         return 'bg-green-100 text-green-800 border-green-300';
-      case 'delivered':
-        return 'bg-gray-100 text-gray-800 border-gray-300';
+      case 'served':
+        return 'bg-teal-100 text-teal-800 border-teal-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
@@ -147,6 +147,7 @@ export default function KitchenDisplay() {
         {/* Status Filter Tabs */}
         <div className="mb-6 flex space-x-2 bg-white rounded-lg p-2 shadow-sm">
           {[
+            { value: 'accepted', label: 'New Orders', icon: '🆕' },
             { value: 'preparing', label: 'Preparing', icon: '🔥' },
             { value: 'ready', label: 'Ready', icon: '✅' },
           ].map((tab) => (
@@ -290,6 +291,16 @@ export default function KitchenDisplay() {
 
                     {/* Action Buttons */}
                     <div className="space-y-2">
+                      {order.status === 'accepted' && (
+                        <button
+                          onClick={() => handleUpdateStatus(order.id, 'preparing')}
+                          disabled={processingOrders.has(order.id)}
+                          className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-bold text-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {processingOrders.has(order.id) ? 'Processing...' : '🔥 Start Preparing'}
+                        </button>
+                      )}
+
                       {order.status === 'preparing' && (
                         <button
                           onClick={() => handleUpdateStatus(order.id, 'ready')}
