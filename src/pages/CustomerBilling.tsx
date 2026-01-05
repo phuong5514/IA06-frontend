@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { CreditCard, Banknote, Receipt, ArrowLeft, Loader2 } from 'lucide-react';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+import { apiClient } from '../config/api';
 
 // Initialize Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
@@ -64,10 +62,7 @@ const CustomerBilling = () => {
   const fetchBillingInfo = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE_URL}/api/payments/billing`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get('/payments/billing');
       setBillingInfo(response.data);
     } catch (error: any) {
       console.error('Error fetching billing info:', error);
@@ -85,16 +80,12 @@ const CustomerBilling = () => {
 
     try {
       setProcessingPayment(true);
-      const token = localStorage.getItem('token');
       
-      const response = await axios.post(
-        `${API_BASE_URL}/api/payments`,
+      const response = await apiClient.post(
+        '/payments',
         {
           orderIds: billingInfo.unpaidOrders,
           paymentMethod,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -327,13 +318,9 @@ const StripePaymentForm = ({
 
   const fetchPaymentIntent = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_BASE_URL}/api/payments/${payment.payment.id}/stripe-intent`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const response = await apiClient.post(
+        `/payments/${payment.payment.id}/stripe-intent`,
+        {}
       );
       setClientSecret(response.data.clientSecret);
     } catch (error: any) {
@@ -368,12 +355,9 @@ const StripePaymentForm = ({
         toast.error(error.message || 'Payment failed');
       } else if (paymentIntent.status === 'succeeded') {
         // Confirm payment with backend
-        await axios.post(
-          `${API_BASE_URL}/api/payments/stripe/confirm`,
-          { paymentIntentId: paymentIntent.id },
-          {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-          }
+        await apiClient.post(
+          '/payments/stripe/confirm',
+          { paymentIntentId: paymentIntent.id }
         );
         onSuccess();
       }

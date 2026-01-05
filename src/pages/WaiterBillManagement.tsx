@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { Receipt, CheckCircle, Loader2, User, Clock, DollarSign, CreditCard, Banknote } from 'lucide-react';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+import { apiClient } from '../config/api';
 
 interface OrderItem {
   id: number;
@@ -58,10 +56,7 @@ const WaiterBillManagement = () => {
 
   const fetchPendingPayments = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE_URL}/api/payments/pending`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get('/payments/pending');
       setPendingPayments(response.data);
     } catch (error: any) {
       console.error('Error fetching pending payments:', error);
@@ -76,16 +71,12 @@ const WaiterBillManagement = () => {
   const processCashPayment = async (paymentId: number) => {
     try {
       setProcessingId(paymentId);
-      const token = localStorage.getItem('token');
       
-      await axios.post(
-        `${API_BASE_URL}/api/payments/cash/process`,
+      await apiClient.post(
+        '/payments/cash/process',
         {
           paymentId,
           notes,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
 

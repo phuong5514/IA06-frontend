@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import apiClient from '../config/api';
 import menuBackground from '../assets/menu_background.png';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 interface MenuCategory {
   id: number;
@@ -59,8 +57,8 @@ export default function MenuCustomer() {
       setError(null);
 
       const [categoriesResponse, itemsResponse] = await Promise.all([
-        axios.get(`${API_BASE_URL}/menu/categories`),
-        axios.get(`${API_BASE_URL}/menu/items?available_only=true`),
+        apiClient.get('/menu/categories'),
+        apiClient.get('/menu/items?available_only=true'),
       ]);
 
       setCategories(categoriesResponse.data.categories);
