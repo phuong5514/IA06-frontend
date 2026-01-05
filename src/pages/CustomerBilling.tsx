@@ -5,6 +5,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { CreditCard, Banknote, Receipt, ArrowLeft, Loader2 } from 'lucide-react';
 import { apiClient } from '../config/api';
+import DashboardLayout from '../components/DashboardLayout';
 
 // Initialize Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
@@ -108,30 +109,34 @@ const CustomerBilling = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
+      <DashboardLayout>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        </div>
+      </DashboardLayout>
     );
   }
 
   if (!billingInfo || billingInfo.orders.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
-        <div className="max-w-2xl mx-auto">
-          <button
-            onClick={() => navigate('/orders')}
-            className="mb-4 flex items-center text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back to Orders
-          </button>
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <Receipt className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">No Bills to Pay</h2>
-            <p className="text-gray-600">You don't have any delivered orders to pay for.</p>
+      <DashboardLayout>
+        <div className="min-h-screen bg-gray-50 p-4">
+          <div className="max-w-2xl mx-auto">
+            <button
+              onClick={() => navigate('/orders')}
+              className="mb-4 flex items-center text-gray-600 hover:text-gray-900"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Back to Orders
+            </button>
+            <div className="bg-white rounded-lg shadow-md p-8 text-center">
+              <Receipt className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">No Bills to Pay</h2>
+              <p className="text-gray-600">You don't have any delivered orders to pay for.</p>
+            </div>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
@@ -154,8 +159,9 @@ const CustomerBilling = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-4xl mx-auto">
+    <DashboardLayout>
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-4xl mx-auto">
         <button
           onClick={() => navigate('/orders')}
           className="mb-4 flex items-center text-gray-600 hover:text-gray-900"
@@ -292,8 +298,9 @@ const CustomerBilling = () => {
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import apiClient from '../config/api';
+import { apiClient } from '../config/api';
 import menuBackground from '../assets/menu_background.png';
 
 interface MenuCategory {
@@ -56,15 +56,23 @@ export default function MenuCustomer() {
       setLoading(true);
       setError(null);
 
+      console.log('Fetching menu from API:', import.meta.env.VITE_API_URL);
+      
       const [categoriesResponse, itemsResponse] = await Promise.all([
         apiClient.get('/menu/categories'),
         apiClient.get('/menu/items?available_only=true'),
       ]);
 
+      console.log('Menu fetched successfully:', { 
+        categories: categoriesResponse.data.categories.length,
+        items: itemsResponse.data.items.length 
+      });
+
       setCategories(categoriesResponse.data.categories);
       setItems(itemsResponse.data.items);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch menu');
+      console.error('Menu fetch error:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to fetch menu');
     } finally {
       setLoading(false);
     }
