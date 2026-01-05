@@ -46,7 +46,7 @@ interface SelectedModifiers {
 export default function MenuItemDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { addItem, items, removeItem, updateItem } = useCart();
+  const { addItem, items, updateItem } = useCart();
   const [item, setItem] = useState<MenuItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
