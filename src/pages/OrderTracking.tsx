@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import { useWebSocket } from '../context/WebSocketContext';
 
 interface OrderItem {
   id: number;
@@ -22,35 +23,24 @@ interface OrderItem {
 interface Order {
   id: number;
   user_id: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  status: 'pending' | 'accepted' | 'rejected' | 'preparing' | 'ready' | 'served' | 'completed' | 'cancelled';
   total_amount: string;
   created_at: string;
   updated_at: string;
   items: OrderItem[];
+  rejection_reason?: string;
 }
 
 export default function OrderTracking() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { onOrderStatusChange, onOrderAccepted, onOrderRejected, isConnected } = useWebSocket();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/');
-      return;
-    }
-    if (orderId) {
-      fetchOrder(orderId);
-      // Poll for updates every 10 seconds
-      const interval = setInterval(() => fetchOrder(orderId), 10000);
-      return () => clearInterval(interval);
-    }
-  }, [orderId, isAuthenticated]);
-
-  const fetchOrder = async (id: string) => {
+  const fetchOrder = useCallback(async (id: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -63,19 +53,67 @@ export default function OrderTracking() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/');
+      return;
+    }
+    if (orderId) {
+      fetchOrder(orderId);
+    }
+  }, [orderId, isAuthenticated, fetchOrder, navigate]);
+
+  // WebSocket event listeners for real-time updates
+  useEffect(() => {
+    if (!orderId) return;
+
+    const unsubscribeStatusChange = onOrderStatusChange((updatedOrder) => {
+      // Only update if it's the current order being viewed
+      if (updatedOrder.id === parseInt(orderId)) {
+        console.log('Order status updated:', updatedOrder);
+        // Fetch the full order data to ensure type consistency
+        fetchOrder(orderId);
+      }
+    });
+
+    const unsubscribeAccepted = onOrderAccepted((updatedOrder) => {
+      if (updatedOrder.id === parseInt(orderId)) {
+        console.log('Order accepted:', updatedOrder);
+        fetchOrder(orderId);
+      }
+    });
+
+    const unsubscribeRejected = onOrderRejected((updatedOrder) => {
+      if (updatedOrder.id === parseInt(orderId)) {
+        console.log('Order rejected:', updatedOrder);
+        fetchOrder(orderId);
+      }
+    });
+
+    return () => {
+      unsubscribeStatusChange();
+      unsubscribeAccepted();
+      unsubscribeRejected();
+    };
+  }, [orderId, onOrderStatusChange, onOrderAccepted, onOrderRejected, fetchOrder]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
-      case 'confirmed':
+      case 'accepted':
         return 'bg-blue-100 text-blue-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
       case 'preparing':
         return 'bg-purple-100 text-purple-800';
       case 'ready':
         return 'bg-green-100 text-green-800';
-      case 'delivered':
+      case 'served':
+        return 'bg-teal-100 text-teal-800';
+      case 'completed':
         return 'bg-gray-100 text-gray-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
@@ -92,18 +130,28 @@ export default function OrderTracking() {
       active?: boolean;
     }> = [
       { key: 'pending', label: 'Order Placed' },
-      { key: 'confirmed', label: 'Confirmed' },
+      { key: 'accepted', label: 'Accepted' },
       { key: 'preparing', label: 'Preparing' },
       { key: 'ready', label: 'Ready' },
-      { key: 'delivered', label: 'Delivered' },
+      { key: 'served', label: 'Served' },
+      { key: 'completed', label: 'Completed' },
     ];
 
     if (!order) return steps;
 
+    // Handle rejected and cancelled statuses separately
+    if (order.status === 'rejected' || order.status === 'cancelled') {
+      return steps.map(step => ({
+        ...step,
+        completed: false,
+        active: false,
+      }));
+    }
+
     const currentIndex = steps.findIndex(s => s.key === order.status);
     return steps.map((step, index) => ({
       ...step,
-      completed: index <= currentIndex && order.status !== 'cancelled',
+      completed: index <= currentIndex,
       active: step.key === order.status,
     }));
   };
@@ -152,10 +200,21 @@ export default function OrderTracking() {
             </svg>
             Back to Menu
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">Order #{order.id}</h1>
-          <p className="text-gray-600 mt-2">
-            Placed on {new Date(order.created_at).toLocaleString()}
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Order #{order.id}</h1>
+              <p className="text-gray-600 mt-2">
+                Placed on {new Date(order.created_at).toLocaleString()}
+              </p>
+            </div>
+            {/* Connection Status Indicator */}
+            <div className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-yellow-500'}`} />
+              <span className="text-sm text-gray-600">
+                {isConnected ? 'Live Updates' : 'Connecting...'}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Status Badge */}
@@ -171,8 +230,18 @@ export default function OrderTracking() {
             </span>
           </div>
 
+          {/* Rejection Reason */}
+          {order.status === 'rejected' && order.rejection_reason && (
+            <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-red-800 mb-1">Order Rejected</h3>
+              <p className="text-sm text-red-700">
+                <span className="font-medium">Reason:</span> {order.rejection_reason}
+              </p>
+            </div>
+          )}
+
           {/* Status Timeline */}
-          {order.status !== 'cancelled' && (
+          {order.status !== 'cancelled' && order.status !== 'rejected' && (
             <div className="relative">
               <div className="flex justify-between items-center">
                 {getStatusSteps().map((step, index) => (

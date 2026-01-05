@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'react-hot-toast';
 import { queryClient } from './config/queryClient';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { WebSocketProvider } from './context/WebSocketContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Header from './components/Header';
 import AuthModal from './components/AuthModal';
@@ -53,9 +55,34 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <CartProvider>
-            <Header onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
-            <Routes>
+          <WebSocketProvider>
+            <CartProvider>
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: '#363636',
+                    color: '#fff',
+                  },
+                  success: {
+                    duration: 3000,
+                    iconTheme: {
+                      primary: '#4ade80',
+                      secondary: '#fff',
+                    },
+                  },
+                  error: {
+                    duration: 4000,
+                    iconTheme: {
+                      primary: '#ef4444',
+                      secondary: '#fff',
+                    },
+                  },
+                }}
+              />
+              <Header onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
+              <Routes>
             <Route
               path="/"
               element={
@@ -211,6 +238,7 @@ function App() {
             <Route path="/menu/item/:id" element={<MenuItemDetail />} />
           </Routes>
           </CartProvider>
+          </WebSocketProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

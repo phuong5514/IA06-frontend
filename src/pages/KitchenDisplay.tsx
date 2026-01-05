@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import { useWebSocket } from '../context/WebSocketContext';
 import DashboardLayout from '../components/DashboardLayout';
 
 interface OrderItem {
@@ -25,7 +27,7 @@ interface KitchenOrder {
     name?: string;
   };
   table_id?: number;
-  status: 'preparing' | 'ready' | 'delivered';
+  status: 'accepted' | 'preparing' | 'ready' | 'served';
   total_amount: string;
   created_at: string;
   updated_at: string;
@@ -36,11 +38,27 @@ interface KitchenOrder {
 export default function KitchenDisplay() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
+  const { onNewOrder, onOrderStatusChange, onOrderAccepted, isConnected } = useWebSocket();
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('preparing');
   const [processingOrders, setProcessingOrders] = useState<Set<number>>(new Set());
+
+  const fetchOrders = useCallback(async () => {
+    try {
+      setError(null);
+      const response = await apiClient.get('/orders/kitchen/all', {
+        params: { status: statusFilter },
+      });
+      setOrders(response.data.orders || []);
+    } catch (err: any) {
+      console.error('Failed to fetch orders:', err);
+      setError(err.response?.data?.message || 'Failed to load orders');
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -55,25 +73,56 @@ export default function KitchenDisplay() {
     }
 
     fetchOrders();
-    // Poll for new orders every 3 seconds
-    const interval = setInterval(fetchOrders, 3000);
-    return () => clearInterval(interval);
-  }, [isAuthenticated, user, statusFilter]);
+  }, [isAuthenticated, user, statusFilter, fetchOrders, navigate]);
 
-  const fetchOrders = async () => {
-    try {
-      setError(null);
-      const response = await apiClient.get('/orders/waiter/all', {
-        params: { status: statusFilter },
+  // WebSocket event listeners
+  useEffect(() => {
+    const unsubscribeNewOrder = onNewOrder((order) => {
+      console.log('[KitchenDisplay] newOrder event received:', order);
+      
+      // Only show "new order" toast for pending orders (not yet accepted)
+      if (order.status === 'pending') {
+        toast.success(`🆕 New Order #${order.id} - Waiting for waiter`, {
+          duration: 5000,
+          icon: '📋',
+        });
+      }
+      
+      fetchOrders();
+    });
+
+    const unsubscribeStatusChange = onOrderStatusChange((order) => {
+      console.log('[KitchenDisplay] orderStatusChange event received:', order);
+      
+      // Show toast for ready status
+      if (order.status === 'ready') {
+        toast.success(`✅ Order #${order.id} marked as ready!`, {
+          duration: 3000,
+        });
+      }
+      
+      fetchOrders();
+    });
+
+    const unsubscribeAccepted = onOrderAccepted((order) => {
+      console.log('[KitchenDisplay] orderAccepted event received:', order);
+      toast.success(`🔔 Order #${order.id} ready to prepare!`, {
+        duration: 5000,
+        icon: '🍳',
+        style: {
+          background: '#10b981',
+          color: '#fff',
+        },
       });
-      setOrders(response.data.orders || []);
-    } catch (err: any) {
-      console.error('Failed to fetch orders:', err);
-      setError(err.response?.data?.message || 'Failed to load orders');
-    } finally {
-      setLoading(false);
-    }
-  };
+      fetchOrders();
+    });
+
+    return () => {
+      unsubscribeNewOrder();
+      unsubscribeStatusChange();
+      unsubscribeAccepted();
+    };
+  }, [onNewOrder, onOrderStatusChange, onOrderAccepted, fetchOrders]);
 
   const handleUpdateStatus = async (orderId: number, newStatus: string) => {
     try {
@@ -98,22 +147,11 @@ export default function KitchenDisplay() {
         return 'bg-purple-100 text-purple-800 border-purple-300';
       case 'ready':
         return 'bg-green-100 text-green-800 border-green-300';
-      case 'delivered':
-        return 'bg-gray-100 text-gray-800 border-gray-300';
+      case 'served':
+        return 'bg-teal-100 text-teal-800 border-teal-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
-  };
-
-  const getTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (seconds < 60) return 'Just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hr ago`;
-    return `${Math.floor(seconds / 86400)} days ago`;
   };
 
   const getTimeSinceOrder = (dateString: string) => {
@@ -140,13 +178,25 @@ export default function KitchenDisplay() {
       <div className="p-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Kitchen Display System</h1>
-          <p className="text-gray-600">View and manage orders in preparation</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Kitchen Display System</h1>
+              <p className="text-gray-600">View and manage orders in preparation</p>
+            </div>
+            {/* Connection Status Indicator */}
+            <div className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className="text-sm text-gray-600">
+                {isConnected ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Status Filter Tabs */}
         <div className="mb-6 flex space-x-2 bg-white rounded-lg p-2 shadow-sm">
           {[
+            { value: 'accepted', label: 'New Orders', icon: '🆕' },
             { value: 'preparing', label: 'Preparing', icon: '🔥' },
             { value: 'ready', label: 'Ready', icon: '✅' },
           ].map((tab) => (
@@ -290,6 +340,16 @@ export default function KitchenDisplay() {
 
                     {/* Action Buttons */}
                     <div className="space-y-2">
+                      {order.status === 'accepted' && (
+                        <button
+                          onClick={() => handleUpdateStatus(order.id, 'preparing')}
+                          disabled={processingOrders.has(order.id)}
+                          className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-bold text-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {processingOrders.has(order.id) ? 'Processing...' : '🔥 Start Preparing'}
+                        </button>
+                      )}
+
                       {order.status === 'preparing' && (
                         <button
                           onClick={() => handleUpdateStatus(order.id, 'ready')}

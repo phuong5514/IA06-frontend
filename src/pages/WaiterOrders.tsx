@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import { useWebSocket } from '../context/WebSocketContext';
 import DashboardLayout from '../components/DashboardLayout';
 
 interface OrderItem {
@@ -18,22 +20,39 @@ interface WaiterOrder {
     email: string;
     name?: string;
   };
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  status: 'pending' | 'accepted' | 'rejected' | 'preparing' | 'ready' | 'served' | 'completed' | 'cancelled';
   total_amount: string;
   created_at: string;
   updated_at: string;
   items_count: number;
   items: OrderItem[];
+  rejection_reason?: string;
 }
 
 export default function WaiterOrders() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
+  const { onNewOrder, onOrderStatusChange, onOrderAccepted, onOrderRejected, isConnected } = useWebSocket();
   const [orders, setOrders] = useState<WaiterOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [processingOrders, setProcessingOrders] = useState<Set<number>>(new Set());
+
+  const fetchOrders = useCallback(async () => {
+    try {
+      setError(null);
+      const response = await apiClient.get('/orders/waiter/all', {
+        params: { status: statusFilter },
+      });
+      setOrders(response.data.orders || []);
+    } catch (err: any) {
+      console.error('Failed to fetch orders:', err);
+      setError(err.response?.data?.message || 'Failed to load orders');
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -48,25 +67,54 @@ export default function WaiterOrders() {
     }
 
     fetchOrders();
-    // Poll for new orders every 5 seconds
-    const interval = setInterval(fetchOrders, 5000);
-    return () => clearInterval(interval);
-  }, [isAuthenticated, user, statusFilter]);
+  }, [isAuthenticated, user, statusFilter, fetchOrders, navigate]);
 
-  const fetchOrders = async () => {
-    try {
-      setError(null);
-      const response = await apiClient.get('/orders/waiter/all', {
-        params: { status: statusFilter },
+  // WebSocket event listeners
+  useEffect(() => {
+    const unsubscribeNewOrder = onNewOrder((order) => {
+      console.log('New order received:', order);
+      toast.success(`🔔 New Order #${order.id}`, {
+        duration: 5000,
+        icon: '🆕',
       });
-      setOrders(response.data.orders || []);
-    } catch (err: any) {
-      console.error('Failed to fetch orders:', err);
-      setError(err.response?.data?.message || 'Failed to load orders');
-    } finally {
-      setLoading(false);
-    }
-  };
+      // Refresh orders list to include the new order
+      fetchOrders();
+    });
+
+    const unsubscribeStatusChange = onOrderStatusChange((order) => {
+      console.log('Order status changed:', order);
+      
+      // Show toast for ready status
+      if (order.status === 'ready') {
+        toast.success(`✅ Order #${order.id} is ready!`, {
+          duration: 5000,
+        });
+      }
+      
+      // Update the order in the list or refresh
+      fetchOrders();
+    });
+
+    const unsubscribeAccepted = onOrderAccepted((order) => {
+      console.log('Order accepted:', order);
+      toast.success(`✓ Order #${order.id} accepted`, {
+        duration: 3000,
+      });
+      fetchOrders();
+    });
+
+    const unsubscribeRejected = onOrderRejected((order) => {
+      console.log('Order rejected:', order);
+      fetchOrders();
+    });
+
+    return () => {
+      unsubscribeNewOrder();
+      unsubscribeStatusChange();
+      unsubscribeAccepted();
+      unsubscribeRejected();
+    };
+  }, [onNewOrder, onOrderStatusChange, onOrderAccepted, onOrderRejected, fetchOrders]);
 
   const handleAcceptOrder = async (orderId: number) => {
     try {
@@ -126,13 +174,17 @@ export default function WaiterOrders() {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'confirmed':
+      case 'accepted':
         return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'rejected':
+        return 'bg-red-100 text-red-800 border-red-300';
       case 'preparing':
         return 'bg-purple-100 text-purple-800 border-purple-300';
       case 'ready':
         return 'bg-green-100 text-green-800 border-green-300';
-      case 'delivered':
+      case 'served':
+        return 'bg-teal-100 text-teal-800 border-teal-300';
+      case 'completed':
         return 'bg-gray-100 text-gray-800 border-gray-300';
       case 'cancelled':
         return 'bg-red-100 text-red-800 border-red-300';
@@ -166,14 +218,25 @@ export default function WaiterOrders() {
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">{/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Management</h1>
-          <p className="text-gray-600">View and manage customer orders</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Management</h1>
+              <p className="text-gray-600">View and manage customer orders</p>
+            </div>
+            {/* Connection Status Indicator */}
+            <div className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className="text-sm text-gray-600">
+                {isConnected ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Status Filter */}
         <div className="bg-white rounded-xl shadow-md p-4 mb-6">
           <div className="flex flex-wrap gap-2">
-            {['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled', 'all'].map((status) => (
+            {['pending', 'accepted', 'rejected', 'preparing', 'ready', 'served', 'completed', 'cancelled', 'all'].map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
@@ -315,11 +378,11 @@ export default function WaiterOrders() {
 
                     {order.status === 'ready' && (
                       <button
-                        onClick={() => handleUpdateStatus(order.id, 'delivered')}
+                        onClick={() => handleUpdateStatus(order.id, 'served')}
                         disabled={processingOrders.has(order.id)}
                         className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                       >
-                        {processingOrders.has(order.id) ? 'Processing...' : '📦 Mark as Delivered'}
+                        {processingOrders.has(order.id) ? 'Processing...' : '📦 Mark as Served'}
                       </button>
                     )}
 
