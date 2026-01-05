@@ -107,17 +107,25 @@ export default function Dashboard() {
             {(user?.role === 'waiter' || user?.role === 'admin' || user?.role === 'super_admin') && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-green-800 mb-4">
-                  🍽️ Order Management
+                  🍽️ Order & Bill Management
                 </h3>
                 <p className="text-green-700 mb-4">
-                  View and manage customer orders, accept new orders, and update order status.
+                  View and manage customer orders, accept new orders, update order status, and process payments.
                 </p>
-                <button
-                  onClick={() => navigate('/waiter/orders')}
-                  className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium w-full md:w-auto"
-                >
-                  View Orders Dashboard
-                </button>
+                <div className="flex flex-col md:flex-row gap-3">
+                  <button
+                    onClick={() => navigate('/waiter/orders')}
+                    className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium flex-1"
+                  >
+                    View Orders Dashboard
+                  </button>
+                  <button
+                    onClick={() => navigate('/waiter/bills')}
+                    className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium flex-1"
+                  >
+                    💵 Manage Bills & Payments
+                  </button>
+                </div>
               </div>
             )}
 
