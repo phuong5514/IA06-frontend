@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
@@ -77,17 +78,42 @@ export default function KitchenDisplay() {
   // WebSocket event listeners
   useEffect(() => {
     const unsubscribeNewOrder = onNewOrder((order) => {
-      console.log('New order received in kitchen:', order);
+      console.log('[KitchenDisplay] newOrder event received:', order);
+      
+      // Only show "new order" toast for pending orders (not yet accepted)
+      if (order.status === 'pending') {
+        toast.success(`🆕 New Order #${order.id} - Waiting for waiter`, {
+          duration: 5000,
+          icon: '📋',
+        });
+      }
+      
       fetchOrders();
     });
 
     const unsubscribeStatusChange = onOrderStatusChange((order) => {
-      console.log('Order status changed in kitchen:', order);
+      console.log('[KitchenDisplay] orderStatusChange event received:', order);
+      
+      // Show toast for ready status
+      if (order.status === 'ready') {
+        toast.success(`✅ Order #${order.id} marked as ready!`, {
+          duration: 3000,
+        });
+      }
+      
       fetchOrders();
     });
 
     const unsubscribeAccepted = onOrderAccepted((order) => {
-      console.log('Order accepted (kitchen view):', order);
+      console.log('[KitchenDisplay] orderAccepted event received:', order);
+      toast.success(`🔔 Order #${order.id} ready to prepare!`, {
+        duration: 5000,
+        icon: '🍳',
+        style: {
+          background: '#10b981',
+          color: '#fff',
+        },
+      });
       fetchOrders();
     });
 

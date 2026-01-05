@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
@@ -72,18 +73,33 @@ export default function WaiterOrders() {
   useEffect(() => {
     const unsubscribeNewOrder = onNewOrder((order) => {
       console.log('New order received:', order);
+      toast.success(`🔔 New Order #${order.id}`, {
+        duration: 5000,
+        icon: '🆕',
+      });
       // Refresh orders list to include the new order
       fetchOrders();
     });
 
     const unsubscribeStatusChange = onOrderStatusChange((order) => {
       console.log('Order status changed:', order);
+      
+      // Show toast for ready status
+      if (order.status === 'ready') {
+        toast.success(`✅ Order #${order.id} is ready!`, {
+          duration: 5000,
+        });
+      }
+      
       // Update the order in the list or refresh
       fetchOrders();
     });
 
     const unsubscribeAccepted = onOrderAccepted((order) => {
       console.log('Order accepted:', order);
+      toast.success(`✓ Order #${order.id} accepted`, {
+        duration: 3000,
+      });
       fetchOrders();
     });
 
