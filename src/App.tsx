@@ -32,6 +32,8 @@ import OrderTracking from './pages/OrderTracking';
 import Orders from './pages/Orders';
 import WaiterOrders from './pages/WaiterOrders';
 import KitchenDisplay from './pages/KitchenDisplay';
+import CustomerBilling from './pages/CustomerBilling';
+import WaiterBillManagement from './pages/WaiterBillManagement';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -231,6 +233,22 @@ function App() {
               element={
                 <ProtectedRoute requiredRoles={['kitchen', 'admin', 'super_admin']}>
                   <KitchenDisplay />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/billing"
+              element={
+                <ProtectedRoute>
+                  <CustomerBilling />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/waiter/bills"
+              element={
+                <ProtectedRoute requiredRoles={['waiter', 'admin', 'super_admin']}>
+                  <WaiterBillManagement />
                 </ProtectedRoute>
               }
             />
