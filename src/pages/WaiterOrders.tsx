@@ -15,18 +15,25 @@ interface OrderItem {
 
 interface WaiterOrder {
   id: number;
+  user_id: string;
+  table_id: number | null;
   user: {
     id: string;
     email: string;
     name?: string;
   };
+  table?: {
+    id: number;
+    table_number: string;
+  } | null;
   status: 'pending' | 'accepted' | 'rejected' | 'preparing' | 'ready' | 'served' | 'completed' | 'cancelled';
   total_amount: string;
+  special_instructions?: string | null;
+  rejection_reason?: string | null;
   created_at: string;
   updated_at: string;
   items_count: number;
   items: OrderItem[];
-  rejection_reason?: string;
 }
 
 export default function WaiterOrders() {
@@ -310,6 +317,16 @@ export default function WaiterOrders() {
                   <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                     <p className="text-sm font-medium text-gray-700">Customer:</p>
                     <p className="text-sm text-gray-900">{order.user.name || order.user.email}</p>
+                    {order.table && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="inline-flex items-center px-2 py-1 rounded-md bg-indigo-100 text-indigo-800 text-xs font-medium">
+                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                          </svg>
+                          Table {order.table.table_number}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Order Items Summary */}
