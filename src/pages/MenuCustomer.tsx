@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { apiClient } from '../config/api';
+import { useTableSession } from '../context/TableSessionContext';
+import QRScannerModal from '../components/QRScannerModal';
 import menuBackground from '../assets/menu_background.png';
 
 interface MenuCategory {
@@ -31,8 +33,10 @@ export default function MenuCustomer() {
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showQRScanner, setShowQRScanner] = useState(false);
   const navigate = useNavigate();
-  const { addItem } = useCart();
+  const { addItem, setTableId } = useCart();
+  const { session, isSessionActive } = useTableSession();
 
   const handleQuickAdd = (item: MenuItem) => {
     addItem({
@@ -45,6 +49,13 @@ export default function MenuCustomer() {
       specialInstructions: undefined,
     });
     alert('Item added to cart!');
+  };
+
+  const handleQRScanSuccess = () => {
+    // Sync table ID from session to cart when QR scan is successful
+    if (session) {
+      setTableId(session.tableId);
+    }
   };
 
   useEffect(() => {
@@ -132,7 +143,41 @@ export default function MenuCustomer() {
           {/* Header with Profile Link */}
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold text-white drop-shadow-lg">Our Menu</h1>
+            <div className="flex items-center gap-3">
+              {/* Table Session Indicator */}
+              {isSessionActive && session && (
+                <div className="bg-green-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg border border-white/20 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="font-medium">Table {session.tableNumber}</span>
+                </div>
+              )}
+              
+              {/* Scan QR Button */}
+              <button
+                onClick={() => setShowQRScanner(true)}
+                className="bg-indigo-600/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg hover:bg-indigo-700/90 transition-colors border border-white/20 flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                  />
+                </svg>
+                <span className="font-medium">Scan QR</span>
+              </button>
+            </div>
           </div>
+
+          {/* QR Scanner Modal */}
+          <QRScannerModal
+            isOpen={showQRScanner}
+            onClose={() => setShowQRScanner(false)}
+            onSuccess={handleQRScanSuccess}
+          />
 
           {/* Frosted Glass Container */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-6 border border-white/20">

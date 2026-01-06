@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { queryClient } from './config/queryClient';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { TableSessionProvider } from './context/TableSessionContext';
 import { WebSocketProvider } from './context/WebSocketContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Header from './components/Header';
@@ -58,32 +59,33 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <WebSocketProvider>
-            <CartProvider>
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  duration: 4000,
-                  style: {
-                    background: '#363636',
-                    color: '#fff',
-                  },
-                  success: {
-                    duration: 3000,
-                    iconTheme: {
-                      primary: '#4ade80',
-                      secondary: '#fff',
-                    },
-                  },
-                  error: {
+            <TableSessionProvider>
+              <CartProvider>
+                <Toaster
+                  position="top-right"
+                  toastOptions={{
                     duration: 4000,
-                    iconTheme: {
-                      primary: '#ef4444',
-                      secondary: '#fff',
+                    style: {
+                      background: '#363636',
+                      color: '#fff',
                     },
-                  },
-                }}
-              />
-              <Header onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
+                    success: {
+                      duration: 3000,
+                      iconTheme: {
+                        primary: '#4ade80',
+                        secondary: '#fff',
+                      },
+                    },
+                    error: {
+                      duration: 4000,
+                      iconTheme: {
+                        primary: '#ef4444',
+                        secondary: '#fff',
+                      },
+                    },
+                  }}
+                />
+                <Header onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
               <Routes>
             <Route
               path="/"
@@ -255,7 +257,8 @@ function App() {
             <Route path="/menu" element={<MenuCustomer />} />
             <Route path="/menu/item/:id" element={<MenuItemDetail />} />
           </Routes>
-          </CartProvider>
+              </CartProvider>
+            </TableSessionProvider>
           </WebSocketProvider>
         </AuthProvider>
       </BrowserRouter>
