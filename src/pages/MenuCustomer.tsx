@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { apiClient } from '../config/api';
 import { useTableSession } from '../context/TableSessionContext';
 import QRScannerModal from '../components/QRScannerModal';
 import menuBackground from '../assets/menu_background.png';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 interface MenuCategory {
   id: number;
@@ -69,15 +67,23 @@ export default function MenuCustomer() {
       setLoading(true);
       setError(null);
 
+      console.log('Fetching menu from API:', import.meta.env.VITE_API_URL);
+      
       const [categoriesResponse, itemsResponse] = await Promise.all([
-        axios.get(`${API_BASE_URL}/menu/categories`),
-        axios.get(`${API_BASE_URL}/menu/items?available_only=true`),
+        apiClient.get('/menu/categories'),
+        apiClient.get('/menu/items?available_only=true'),
       ]);
+
+      console.log('Menu fetched successfully:', { 
+        categories: categoriesResponse.data.categories.length,
+        items: itemsResponse.data.items.length 
+      });
 
       setCategories(categoriesResponse.data.categories);
       setItems(itemsResponse.data.items);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch menu');
+      console.error('Menu fetch error:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to fetch menu');
     } finally {
       setLoading(false);
     }

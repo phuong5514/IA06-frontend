@@ -94,12 +94,20 @@ export default function Orders() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
-          <button
-            onClick={() => navigate('/menu/customer')}
-            className="text-indigo-600 hover:text-indigo-800 font-medium"
-          >
-            Back to Menu
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => navigate('/billing')}
+              className="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
+            >
+              View Bill & Pay
+            </button>
+            <button
+              onClick={() => navigate('/menu/customer')}
+              className="text-indigo-600 hover:text-indigo-800 font-medium"
+            >
+              Back to Menu
+            </button>
+          </div>
         </div>
 
         {orders.length === 0 ? (
