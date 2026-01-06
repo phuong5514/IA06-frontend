@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useTableSession } from '../context/TableSessionContext';
 import { apiClient } from '../config/api';
 
 export default function Cart() {
-  const { items, removeItem, updateQuantity, clearCart, getTotalPrice, getItemPrice } = useCart();
+  const { items, removeItem, updateQuantity, clearCart, getTotalPrice, getItemPrice, tableId } = useCart();
   const { isAuthenticated } = useAuth();
+  const { session, endSession } = useTableSession();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,10 @@ export default function Cart() {
     setError(null);
 
     try {
-      // Create the order with all items
+      // Get the table ID from either the cart context or the table session
+      const orderTableId = tableId || session?.tableId;
+
+      // Create the order with all items and table information
       const orderData = {
         items: items.map(item => ({
           menu_item_id: item.menuItemId,
@@ -54,13 +59,19 @@ export default function Cart() {
             modifier_option_id: mod.optionId,
           })),
         })),
+        ...(orderTableId && { table_id: orderTableId }), // Include table_id if available
       };
 
-      // You'll need to implement this endpoint in your backend
+      // Submit the order to the backend
       const response = await apiClient.post('/orders', orderData);
 
       setSuccess(true);
       clearCart();
+      
+      // End the table session after successful order
+      if (session) {
+        endSession();
+      }
 
       // Redirect to order tracking page after a short delay
       setTimeout(() => {

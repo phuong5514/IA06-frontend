@@ -22,6 +22,7 @@ export interface CartItem {
 
 interface CartContextType {
   items: CartItem[];
+  tableId: number | null;
   addItem: (item: Omit<CartItem, 'id'>) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
@@ -30,6 +31,7 @@ interface CartContextType {
   getTotalPrice: () => number;
   getTotalItems: () => number;
   getItemPrice: (item: CartItem) => number;
+  setTableId: (tableId: number | null) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -41,10 +43,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return savedCart ? JSON.parse(savedCart) : [];
   });
 
+  const [tableId, setTableId] = useState<number | null>(() => {
+    // Load table ID from localStorage on initialization
+    const savedTableId = localStorage.getItem('cartTableId');
+    return savedTableId ? JSON.parse(savedTableId) : null;
+  });
+
   // Save cart to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(items));
   }, [items]);
+
+  // Save table ID to localStorage whenever it changes
+  useEffect(() => {
+    if (tableId !== null) {
+      localStorage.setItem('cartTableId', JSON.stringify(tableId));
+    } else {
+      localStorage.removeItem('cartTableId');
+    }
+  }, [tableId]);
 
   const generateId = () => {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -89,6 +106,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = () => {
     setItems([]);
+    setTableId(null);
   };
 
   const getTotalPrice = (): number => {
@@ -103,6 +121,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     <CartContext.Provider
       value={{
         items,
+        tableId,
         addItem,
         removeItem,
         updateQuantity,
@@ -111,6 +130,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         getTotalPrice,
         getTotalItems,
         getItemPrice,
+        setTableId,
       }}
     >
       {children}
