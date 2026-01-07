@@ -117,29 +117,56 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, [socket]);
 
   const onOrderStatusChange = useCallback((callback: (order: Order, previousStatus: string) => void) => {
-    if (!socket) return () => {};
+    if (!socket) {
+      console.warn('[WebSocketContext] onOrderStatusChange called but socket is null');
+      return () => {};
+    }
 
-    socket.on('orderStatusChange', callback);
+    console.log('[WebSocketContext] Registering orderStatusChange listener');
+    const handler = (order: Order, previousStatus: string) => {
+      console.log('[WebSocketContext] orderStatusChange event received:', { order, previousStatus });
+      callback(order, previousStatus);
+    };
+    socket.on('orderStatusChange', handler);
     return () => {
-      socket.off('orderStatusChange', callback);
+      console.log('[WebSocketContext] Unregistering orderStatusChange listener');
+      socket.off('orderStatusChange', handler);
     };
   }, [socket]);
 
   const onOrderAccepted = useCallback((callback: (order: Order) => void) => {
-    if (!socket) return () => {};
+    if (!socket) {
+      console.warn('[WebSocketContext] onOrderAccepted called but socket is null');
+      return () => {};
+    }
 
-    socket.on('orderAccepted', callback);
+    console.log('[WebSocketContext] Registering orderAccepted listener');
+    const handler = (order: Order) => {
+      console.log('[WebSocketContext] orderAccepted event received:', order);
+      callback(order);
+    };
+    socket.on('orderAccepted', handler);
     return () => {
-      socket.off('orderAccepted', callback);
+      console.log('[WebSocketContext] Unregistering orderAccepted listener');
+      socket.off('orderAccepted', handler);
     };
   }, [socket]);
 
   const onOrderRejected = useCallback((callback: (order: Order) => void) => {
-    if (!socket) return () => {};
+    if (!socket) {
+      console.warn('[WebSocketContext] onOrderRejected called but socket is null');
+      return () => {};
+    }
 
-    socket.on('orderRejected', callback);
+    console.log('[WebSocketContext] Registering orderRejected listener');
+    const handler = (order: Order) => {
+      console.log('[WebSocketContext] orderRejected event received:', order);
+      callback(order);
+    };
+    socket.on('orderRejected', handler);
     return () => {
-      socket.off('orderRejected', callback);
+      console.log('[WebSocketContext] Unregistering orderRejected listener');
+      socket.off('orderRejected', handler);
     };
   }, [socket]);
 

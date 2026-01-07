@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
@@ -69,30 +70,87 @@ export default function OrderTracking() {
   useEffect(() => {
     if (!orderId) return;
 
-    const unsubscribeStatusChange = onOrderStatusChange((updatedOrder) => {
+    console.log('[OrderTracking] Setting up WebSocket listeners for order:', orderId);
+    console.log('[OrderTracking] WebSocket connected:', isConnected);
+
+    const unsubscribeStatusChange = onOrderStatusChange((updatedOrder, previousStatus) => {
+      console.log('[OrderTracking] orderStatusChange event received:', updatedOrder, 'previous:', previousStatus);
       // Only update if it's the current order being viewed
       if (updatedOrder.id === parseInt(orderId)) {
-        console.log('Order status updated:', updatedOrder);
+        console.log('[OrderTracking] Order status updated for current order:', updatedOrder);
+        
+        // Show toast notification based on status
+        switch (updatedOrder.status) {
+          case 'accepted':
+            toast.success('✅ Your order has been accepted!', {
+              duration: 5000,
+              icon: '🎉',
+            });
+            break;
+          case 'rejected':
+            toast.error(`❌ Your order has been rejected${updatedOrder.rejection_reason ? `: ${updatedOrder.rejection_reason}` : ''}`, {
+              duration: 7000,
+              icon: '😔',
+            });
+            break;
+          case 'preparing':
+            toast.success('👨‍🍳 Your order is being prepared!', {
+              duration: 5000,
+              icon: '🍳',
+            });
+            break;
+          case 'ready':
+            toast.success('🎊 Your order is ready!', {
+              duration: 6000,
+              icon: '✨',
+              style: {
+                background: '#10b981',
+                color: '#fff',
+              },
+            });
+            break;
+          case 'served':
+            toast.success('🍽️ Your order has been served. Enjoy!', {
+              duration: 4000,
+            });
+            break;
+          case 'completed':
+            toast.success('✓ Order completed. Thank you!', {
+              duration: 3000,
+            });
+            break;
+          case 'cancelled':
+            toast.error('Order has been cancelled', {
+              duration: 5000,
+            });
+            break;
+        }
+        
         // Fetch the full order data to ensure type consistency
         fetchOrder(orderId);
       }
     });
 
     const unsubscribeAccepted = onOrderAccepted((updatedOrder) => {
+      console.log('[OrderTracking] orderAccepted event received:', updatedOrder);
       if (updatedOrder.id === parseInt(orderId)) {
-        console.log('Order accepted:', updatedOrder);
-        fetchOrder(orderId);
+        console.log('[OrderTracking] Order accepted for current order - skipping toast (handled by orderStatusChange)');
+        // Note: We don't show toast here because orderStatusChange will handle it
+        // This prevents duplicate notifications
       }
     });
 
     const unsubscribeRejected = onOrderRejected((updatedOrder) => {
+      console.log('[OrderTracking] orderRejected event received:', updatedOrder);
       if (updatedOrder.id === parseInt(orderId)) {
-        console.log('Order rejected:', updatedOrder);
-        fetchOrder(orderId);
+        console.log('[OrderTracking] Order rejected for current order - skipping toast (handled by orderStatusChange)');
+        // Note: We don't show toast here because orderStatusChange will handle it
+        // This prevents duplicate notifications
       }
     });
 
     return () => {
+      console.log('[OrderTracking] Cleaning up WebSocket listeners');
       unsubscribeStatusChange();
       unsubscribeAccepted();
       unsubscribeRejected();
