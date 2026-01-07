@@ -5,6 +5,7 @@ import { apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import DashboardLayout from '../components/DashboardLayout';
+import RejectionModal from '../components/RejectionModal';
 
 interface OrderItem {
   id: number;
@@ -45,6 +46,12 @@ export default function WaiterOrders() {
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [processingOrders, setProcessingOrders] = useState<Set<number>>(new Set());
+  const [viewMode, setViewMode] = useState<'list' | 'table' | 'history'>('list');
+  const [rejectionModal, setRejectionModal] = useState<{ isOpen: boolean; orderId: number | null; orderDetails?: any }>({
+    isOpen: false,
+    orderId: null,
+  });
+  const [orderCounts, setOrderCounts] = useState<{ pending: number; ready: number }>({ pending: 0, ready: 0 });
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -61,6 +68,21 @@ export default function WaiterOrders() {
     }
   }, [statusFilter]);
 
+  const fetchOrderCounts = useCallback(async () => {
+    try {
+      const [pendingResponse, readyResponse] = await Promise.all([
+        apiClient.get('/orders/waiter/all', { params: { status: 'pending' } }),
+        apiClient.get('/orders/waiter/all', { params: { status: 'ready' } }),
+      ]);
+      setOrderCounts({
+        pending: pendingResponse.data.orders?.length || 0,
+        ready: readyResponse.data.orders?.length || 0,
+      });
+    } catch (err: any) {
+      console.error('Failed to fetch order counts:', err);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/');
@@ -74,7 +96,8 @@ export default function WaiterOrders() {
     }
 
     fetchOrders();
-  }, [isAuthenticated, user, statusFilter, fetchOrders, navigate]);
+    fetchOrderCounts();
+  }, [isAuthenticated, user, statusFilter, fetchOrders, fetchOrderCounts, navigate]);
 
   // WebSocket event listeners
   useEffect(() => {
@@ -84,8 +107,9 @@ export default function WaiterOrders() {
         duration: 5000,
         icon: '🆕',
       });
-      // Refresh orders list to include the new order
+      // Refresh orders list and counts
       fetchOrders();
+      fetchOrderCounts();
     });
 
     const unsubscribeStatusChange = onOrderStatusChange((order) => {
@@ -98,8 +122,9 @@ export default function WaiterOrders() {
         });
       }
       
-      // Update the order in the list or refresh
+      // Update the order in the list and counts
       fetchOrders();
+      fetchOrderCounts();
     });
 
     const unsubscribeAccepted = onOrderAccepted((order) => {
@@ -108,11 +133,13 @@ export default function WaiterOrders() {
         duration: 3000,
       });
       fetchOrders();
+      fetchOrderCounts();
     });
 
     const unsubscribeRejected = onOrderRejected((order) => {
       console.log('Order rejected:', order);
       fetchOrders();
+      fetchOrderCounts();
     });
 
     return () => {
@@ -140,17 +167,31 @@ export default function WaiterOrders() {
     }
   };
 
-  const handleRejectOrder = async (orderId: number) => {
-    const reason = prompt('Please provide a reason for rejecting this order (optional):');
-    if (reason === null) return; // User cancelled
+  const openRejectionModal = (orderId: number) => {
+    const order = orders.find(o => o.id === orderId);
+    setRejectionModal({
+      isOpen: true,
+      orderId,
+      orderDetails: {
+        tableNumber: order?.table?.table_number,
+        itemsCount: order?.items_count,
+      },
+    });
+  };
 
+  const handleRejectOrder = async (reason: string) => {
+    if (!rejectionModal.orderId) return;
+
+    const orderId = rejectionModal.orderId;
     try {
       setProcessingOrders(prev => new Set(prev).add(orderId));
       await apiClient.post(`/orders/${orderId}/reject`, { reason });
+      toast.success(`Order #${orderId} rejected`);
       await fetchOrders();
     } catch (err: any) {
       console.error('Failed to reject order:', err);
-      alert(err.response?.data?.message || 'Failed to reject order');
+      toast.error(err.response?.data?.message || 'Failed to reject order');
+      throw err;
     } finally {
       setProcessingOrders(prev => {
         const newSet = new Set(prev);
@@ -211,6 +252,42 @@ export default function WaiterOrders() {
     return date.toLocaleDateString();
   };
 
+  const getWaitTime = (dateString: string): number => {
+    const date = new Date(dateString);
+    const now = new Date();
+    return Math.floor((now.getTime() - date.getTime()) / (1000 * 60)); // minutes
+  };
+
+  const getPriorityLevel = (order: WaiterOrder): { level: 'high' | 'medium' | 'low'; color: string; icon: string } => {
+    const waitTime = getWaitTime(order.created_at);
+    
+    if (order.status === 'pending' && waitTime > 10) {
+      return { level: 'high', color: 'text-red-600', icon: '🔴' };
+    } else if (order.status === 'pending' && waitTime > 5) {
+      return { level: 'medium', color: 'text-orange-600', icon: '🟠' };
+    } else if (order.status === 'ready' && waitTime > 15) {
+      return { level: 'high', color: 'text-red-600', icon: '🔴' };
+    } else if (order.status === 'ready' && waitTime > 10) {
+      return { level: 'medium', color: 'text-orange-600', icon: '🟠' };
+    }
+    
+    return { level: 'low', color: 'text-green-600', icon: '🟢' };
+  };
+
+  const groupOrdersByTable = () => {
+    const grouped: { [key: string]: WaiterOrder[] } = {};
+    
+    orders.forEach(order => {
+      const tableKey = order.table ? `Table ${order.table.table_number}` : 'No Table';
+      if (!grouped[tableKey]) {
+        grouped[tableKey] = [];
+      }
+      grouped[tableKey].push(order);
+    });
+    
+    return grouped;
+  };
+
   if (loading && orders.length === 0) {
     return (
       <DashboardLayout>
@@ -226,9 +303,38 @@ export default function WaiterOrders() {
       <div className="max-w-7xl mx-auto">{/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Management</h1>
-              <p className="text-gray-600">View and manage customer orders</p>
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Management</h1>
+                <p className="text-gray-600">View and manage customer orders</p>
+              </div>
+              {/* Notification Badge */}
+              {(orderCounts.pending > 0 || orderCounts.ready > 0) && (
+                <div className="flex items-center gap-3">
+                  {orderCounts.pending > 0 && (
+                    <div className="relative">
+                      <div className="flex items-center gap-2 bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-2 rounded-full shadow-md">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-bold text-lg">{orderCounts.pending}</span>
+                        <span className="text-sm font-medium">Pending</span>
+                      </div>
+                    </div>
+                  )}
+                  {orderCounts.ready > 0 && (
+                    <div className="relative">
+                      <div className="flex items-center gap-2 bg-green-100 border-2 border-green-400 text-green-800 px-4 py-2 rounded-full shadow-md">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-bold text-lg">{orderCounts.ready}</span>
+                        <span className="text-sm font-medium">Ready</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             {/* Connection Status Indicator */}
             <div className="flex items-center gap-2">
@@ -242,20 +348,63 @@ export default function WaiterOrders() {
 
         {/* Status Filter */}
         <div className="bg-white rounded-xl shadow-md p-4 mb-6">
-          <div className="flex flex-wrap gap-2">
-            {['pending', 'accepted', 'rejected', 'preparing', 'ready', 'served', 'completed', 'cancelled', 'all'].map((status) => (
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {/* Status Filters */}
+            <div className="flex flex-wrap gap-2">
+              {['pending', 'accepted', 'rejected', 'preparing', 'ready', 'served', 'completed', 'cancelled', 'all'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${
+                    statusFilter === status
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+
+            {/* View Mode Toggle */}
+            <div className="flex gap-2 border border-gray-300 rounded-lg p-1">
               <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${
-                  statusFilter === status
+                onClick={() => setViewMode('list')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                  viewMode === 'list'
                     ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'text-gray-700 hover:bg-gray-100'
                 }`}
+                title="List View"
               >
-                {status}
+                📋 List
               </button>
-            ))}
+              <button
+                onClick={() => setViewMode('table')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                  viewMode === 'table'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+                title="Table View"
+              >
+                🍽️ Tables
+              </button>
+              <button
+                onClick={() => {
+                  setViewMode('history');
+                  setStatusFilter('completed');
+                }}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                  viewMode === 'history'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+                title="History View"
+              >
+                📜 History
+              </button>
+            </div>
           </div>
         </div>
 
@@ -265,7 +414,7 @@ export default function WaiterOrders() {
           </div>
         )}
 
-        {/* Orders Grid */}
+        {/* Orders Display */}
         {orders.length === 0 ? (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center">
             <svg
@@ -288,139 +437,310 @@ export default function WaiterOrders() {
                 : `No ${statusFilter} orders found`}
             </p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {orders.map((order) => (
-              <div
-                key={order.id}
-                className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow border-2 ${
-                  order.status === 'pending' ? 'border-yellow-300 ring-2 ring-yellow-100' : 'border-gray-200'
-                }`}
-              >
-                <div className="p-6">
-                  {/* Order Header */}
-                  <div className="flex justify-between items-start mb-4">
+        ) : viewMode === 'table' ? (
+          // Table View - Orders grouped by table
+          <div className="space-y-6">
+            {Object.entries(groupOrdersByTable()).map(([tableName, tableOrders]) => (
+              <div key={tableName} className="bg-white rounded-xl shadow-md border-2 border-gray-200">
+                <div className="bg-indigo-600 text-white px-6 py-4 rounded-t-xl flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🍽️</span>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900">Order #{order.id}</h3>
-                      <p className="text-sm text-gray-600">{getTimeAgo(order.created_at)}</p>
-                    </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold border-2 capitalize ${getStatusColor(
-                        order.status
-                      )}`}
-                    >
-                      {order.status}
-                    </span>
-                  </div>
-
-                  {/* Customer Info */}
-                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm font-medium text-gray-700">Customer:</p>
-                    <p className="text-sm text-gray-900">{order.user.name || order.user.email}</p>
-                    {order.table && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="inline-flex items-center px-2 py-1 rounded-md bg-indigo-100 text-indigo-800 text-xs font-medium">
-                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-                          </svg>
-                          Table {order.table.table_number}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Order Items Summary */}
-                  <div className="mb-4">
-                    <p className="text-sm font-medium text-gray-700 mb-2">
-                      Items ({order.items_count}):
-                    </p>
-                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                      {order.items.map((item) => (
-                        <div
-                          key={item.id}
-                          className="text-sm flex justify-between text-gray-600"
-                        >
-                          <span>
-                            {item.quantity}x {item.menu_item_name}
-                          </span>
-                          <span className="font-medium">${parseFloat(item.price).toFixed(2)}</span>
-                        </div>
-                      ))}
+                      <h3 className="text-xl font-bold">{tableName}</h3>
+                      <p className="text-indigo-100 text-sm">{tableOrders.length} order(s)</p>
                     </div>
                   </div>
-
-                  {/* Total */}
-                  <div className="mb-4 pt-3 border-t border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-bold text-gray-900">Total:</span>
-                      <span className="text-xl font-bold text-green-600">
-                        ${parseFloat(order.total_amount).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="space-y-2">
-                    {order.status === 'pending' && (
-                      <>
-                        <button
-                          onClick={() => handleAcceptOrder(order.id)}
-                          disabled={processingOrders.has(order.id)}
-                          className="w-full bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                        >
-                          {processingOrders.has(order.id) ? (
-                            'Processing...'
-                          ) : (
-                            <>
-                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path
-                                  fillRule="evenodd"
-                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                              Accept Order
-                            </>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleRejectOrder(order.id)}
-                          disabled={processingOrders.has(order.id)}
-                          className="w-full bg-red-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                        >
-                          Reject Order
-                        </button>
-                      </>
-                    )}
-
-                    {order.status === 'ready' && (
-                      <button
-                        onClick={() => handleUpdateStatus(order.id, 'served')}
-                        disabled={processingOrders.has(order.id)}
-                        className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                </div>
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {tableOrders.map((order) => {
+                    const priority = getPriorityLevel(order);
+                    return (
+                      <div
+                        key={order.id}
+                        className={`bg-gray-50 rounded-lg p-4 border-2 ${
+                          priority.level === 'high'
+                            ? 'border-red-300 ring-2 ring-red-100'
+                            : priority.level === 'medium'
+                            ? 'border-orange-300 ring-2 ring-orange-100'
+                            : 'border-gray-200'
+                        }`}
                       >
-                        {processingOrders.has(order.id) ? 'Processing...' : '📦 Mark as Served'}
-                      </button>
-                    )}
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h4 className="font-bold text-gray-900">Order #{order.id}</h4>
+                            <p className="text-xs text-gray-600">{getTimeAgo(order.created_at)}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-lg ${priority.color}`} title={`${priority.level} priority`}>
+                              {priority.icon}
+                            </span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold border capitalize ${getStatusColor(order.status)}`}>
+                              {order.status}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="text-sm text-gray-600 mb-2">
+                          {order.items_count} items · ${parseFloat(order.total_amount).toFixed(2)}
+                        </div>
 
-                    <button
-                      onClick={() => navigate(`/orders/${order.id}`)}
-                      className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-                    >
-                      View Details
-                    </button>
-                  </div>
+                        <div className="space-y-1">
+                          {order.status === 'pending' && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleAcceptOrder(order.id)}
+                                disabled={processingOrders.has(order.id)}
+                                className="flex-1 bg-green-600 text-white py-1.5 px-3 rounded text-xs font-medium hover:bg-green-700 disabled:bg-gray-400"
+                              >
+                                ✓ Accept
+                              </button>
+                              <button
+                                onClick={() => openRejectionModal(order.id)}
+                                disabled={processingOrders.has(order.id)}
+                                className="flex-1 bg-red-600 text-white py-1.5 px-3 rounded text-xs font-medium hover:bg-red-700 disabled:bg-gray-400"
+                              >
+                                ✗ Reject
+                              </button>
+                            </div>
+                          )}
+                          {order.status === 'ready' && (
+                            <button
+                              onClick={() => handleUpdateStatus(order.id, 'served')}
+                              disabled={processingOrders.has(order.id)}
+                              className="w-full bg-indigo-600 text-white py-1.5 px-3 rounded text-xs font-medium hover:bg-indigo-700 disabled:bg-gray-400"
+                            >
+                              📦 Mark as Served
+                            </button>
+                          )}
+                          <button
+                            onClick={() => navigate(`/orders/${order.id}`)}
+                            className="w-full bg-gray-200 text-gray-700 py-1.5 px-3 rounded text-xs font-medium hover:bg-gray-300"
+                          >
+                            View Details
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
+          </div>
+        ) : viewMode === 'history' ? (
+          // History View - Completed orders for the day
+          <div className="bg-white rounded-xl shadow-md">
+            <div className="bg-gray-800 text-white px-6 py-4 rounded-t-xl">
+              <h3 className="text-xl font-bold">📜 Order History - {new Date().toLocaleDateString()}</h3>
+              <p className="text-gray-300 text-sm">Completed orders for today</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b-2 border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Table</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {orders.map((order) => (
+                    <tr key={order.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">#{order.id}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{order.table?.table_number || 'N/A'}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{order.items_count} items</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-green-600">${parseFloat(order.total_amount).toFixed(2)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">{getTimeAgo(order.created_at)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${getStatusColor(order.status)}`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={() => navigate(`/orders/${order.id}`)}
+                          className="text-indigo-600 hover:text-indigo-900 font-medium"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          // List View - Standard grid layout with priority indicators
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {orders.map((order) => {
+              const priority = getPriorityLevel(order);
+              return (
+                <div
+                  key={order.id}
+                  className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow border-2 ${
+                    priority.level === 'high'
+                      ? 'border-red-400 ring-2 ring-red-100'
+                      : priority.level === 'medium'
+                      ? 'border-orange-400 ring-2 ring-orange-100'
+                      : order.status === 'pending'
+                      ? 'border-yellow-300 ring-2 ring-yellow-100'
+                      : 'border-gray-200'
+                  }`}
+                >
+                  <div className="p-6">
+                    {/* Order Header with Priority */}
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-xl font-bold text-gray-900">Order #{order.id}</h3>
+                          <span className={`text-xl ${priority.color}`} title={`${priority.level} priority`}>
+                            {priority.icon}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">{getTimeAgo(order.created_at)}</p>
+                        <p className="text-xs text-gray-500">Wait: {getWaitTime(order.created_at)} min</p>
+                      </div>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold border-2 capitalize ${getStatusColor(
+                          order.status
+                        )}`}
+                      >
+                        {order.status}
+                      </span>
+                    </div>
+
+                    {/* Customer Info */}
+                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm font-medium text-gray-700">Customer:</p>
+                      <p className="text-sm text-gray-900">{order.user.name || order.user.email}</p>
+                      {order.table && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="inline-flex items-center px-2 py-1 rounded-md bg-indigo-100 text-indigo-800 text-xs font-medium">
+                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                            </svg>
+                            Table {order.table.table_number}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Order Items Summary */}
+                    <div className="mb-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">
+                        Items ({order.items_count}):
+                      </p>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {order.items.map((item) => (
+                          <div
+                            key={item.id}
+                            className="text-sm flex justify-between text-gray-600"
+                          >
+                            <span>
+                              {item.quantity}x {item.menu_item_name}
+                            </span>
+                            <span className="font-medium">${parseFloat(item.price).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Total */}
+                    <div className="mb-4 pt-3 border-t border-gray-200">
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg font-bold text-gray-900">Total:</span>
+                        <span className="text-xl font-bold text-green-600">
+                          ${parseFloat(order.total_amount).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="space-y-2">
+                      {order.status === 'pending' && (
+                        <>
+                          <button
+                            onClick={() => handleAcceptOrder(order.id)}
+                            disabled={processingOrders.has(order.id)}
+                            className="w-full bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                          >
+                            {processingOrders.has(order.id) ? (
+                              'Processing...'
+                            ) : (
+                              <>
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                Accept Order
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => openRejectionModal(order.id)}
+                            disabled={processingOrders.has(order.id)}
+                            className="w-full bg-red-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Reject Order
+                          </button>
+                        </>
+                      )}
+
+                      {order.status === 'ready' && (
+                        <button
+                          onClick={() => handleUpdateStatus(order.id, 'served')}
+                          disabled={processingOrders.has(order.id)}
+                          className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {processingOrders.has(order.id) ? 'Processing...' : '📦 Mark as Served'}
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => navigate(`/orders/${order.id}`)}
+                        className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
         {/* Auto-refresh notice */}
         <div className="mt-6 text-center text-sm text-gray-500">
-          Orders update automatically every 5 seconds
+          Orders update automatically in real-time
         </div>
       </div>
+
+      {/* Rejection Modal */}
+      <RejectionModal
+        isOpen={rejectionModal.isOpen}
+        onClose={() => setRejectionModal({ isOpen: false, orderId: null })}
+        onConfirm={handleRejectOrder}
+        orderId={rejectionModal.orderId || 0}
+        orderDetails={rejectionModal.orderDetails}
+      />
     </DashboardLayout>
   );
 }
