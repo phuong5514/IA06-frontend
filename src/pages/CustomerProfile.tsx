@@ -1,14 +1,67 @@
 import { useAuth } from '../context/AuthContext';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../config/api';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { 
+  User, 
+  Receipt, 
+  Heart, 
+  CreditCard, 
+  Plus,
+  Trash2,
+  Check,
+  X,
+  Clock,
+  CheckCircle,
+  Loader2
+} from 'lucide-react';
+
+// Initialize Stripe
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
+
+interface Order {
+  id: number;
+  total_amount: string;
+  status: string;
+  created_at: string;
+  isPaid: boolean;
+  payment: any;
+  items: Array<{
+    id: number;
+    quantity: number;
+    unit_price: string;
+    menuItem: {
+      name: string;
+      price: string;
+    };
+  }>;
+}
+
+interface PaymentMethod {
+  id: number;
+  card_brand: string;
+  last4: string;
+  exp_month: number;
+  exp_year: number;
+  is_default: boolean;
+}
+
+type TabType = 'profile' | 'orders' | 'preferences' | 'payments';
 
 export default function CustomerProfile() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<TabType>('profile');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showAddCard, setShowAddCard] = useState(false);
 
-  // Fetch user profile data including ordering history, preferences, payment options
-  const { data: profileData, isLoading } = useQuery({
+  // Fetch user profile
+  const { data: profileData } = useQuery({
     queryKey: ['user', 'profile'],
     queryFn: async () => {
       const response = await apiClient.get('/user/me');
@@ -17,7 +70,7 @@ export default function CustomerProfile() {
   });
 
   // Fetch ordering history
-  const { data: orderHistory, isLoading: ordersLoading } = useQuery({
+  const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ['user', 'orders'],
     queryFn: async () => {
       const response = await apiClient.get('/user/orders');
@@ -26,7 +79,7 @@ export default function CustomerProfile() {
   });
 
   // Fetch food preferences
-  const { data: preferences, isLoading: prefsLoading } = useQuery({
+  const { data: preferencesData, isLoading: prefsLoading, refetch: refetchPreferences } = useQuery({
     queryKey: ['user', 'preferences'],
     queryFn: async () => {
       const response = await apiClient.get('/user/preferences');
@@ -34,120 +87,634 @@ export default function CustomerProfile() {
     },
   });
 
-  // Fetch payment options
-  const { data: paymentOptions, isLoading: paymentLoading } = useQuery({
-    queryKey: ['user', 'payment-options'],
+  // Sync preferences data to selectedTags when data loads or changes
+  useEffect(() => {
+    if (preferencesData?.preferences?.dietary_tags) {
+      setSelectedTags(preferencesData.preferences.dietary_tags);
+    }
+  }, [preferencesData]);
+
+  // Fetch available dietary tags
+  const { data: availableTagsData } = useQuery({
+    queryKey: ['available-tags'],
     queryFn: async () => {
-      const response = await apiClient.get('/user/payment-options');
+      const response = await apiClient.get('/user/available-tags');
       return response.data;
     },
   });
 
-  const handleViewMenu = () => {
-    navigate('/menu/customer');
+  // Fetch payment methods
+  const { data: paymentMethodsData, isLoading: paymentsLoading } = useQuery({
+    queryKey: ['user', 'payment-methods'],
+    queryFn: async () => {
+      const response = await apiClient.get('/user/payment-methods');
+      return response.data;
+    },
+  });
+
+  // Update preferences mutation
+  const updatePreferencesMutation = useMutation({
+    mutationFn: async (tags: string[]) => {
+      const response = await apiClient.post('/user/preferences', {
+        dietary_tags: tags,
+      });
+      return response.data;
+    },
+    onSuccess: async () => {
+      await refetchPreferences();
+      toast.success('Preferences updated successfully!');
+    },
+    onError: (error) => {
+      console.error('Error updating preferences:', error);
+      toast.error('Failed to update preferences');
+    },
+  });
+
+  // Delete payment method mutation
+  const deletePaymentMethodMutation = useMutation({
+    mutationFn: async (methodId: number) => {
+      const response = await apiClient.post(`/user/payment-methods/${methodId}/delete`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', 'payment-methods'] });
+      toast.success('Payment method deleted successfully!');
+    },
+    onError: () => {
+      toast.error('Failed to delete payment method');
+    },
+  });
+
+  // Set default payment method mutation
+  const setDefaultPaymentMethodMutation = useMutation({
+    mutationFn: async (methodId: number) => {
+      const response = await apiClient.post(`/user/payment-methods/${methodId}/set-default`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', 'payment-methods'] });
+      toast.success('Default payment method updated!');
+    },
+    onError: () => {
+      toast.error('Failed to set default payment method');
+    },
+  });
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'profile':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
+                {user?.email?.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">
+                  {profileData?.user?.name || 'Guest User'}
+                </h2>
+                <p className="text-gray-600">{user?.email}</p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-6 space-y-4">
+              <div>
+                <span className="font-medium text-gray-700">Email:</span>
+                <span className="ml-2 text-gray-900">{user?.email}</span>
+              </div>
+              {profileData?.user?.phone && (
+                <div>
+                  <span className="font-medium text-gray-700">Phone:</span>
+                  <span className="ml-2 text-gray-900">{profileData.user.phone}</span>
+                </div>
+              )}
+              <div>
+                <span className="font-medium text-gray-700">Member Since:</span>
+                <span className="ml-2 text-gray-900">
+                  {profileData?.user?.created_at
+                    ? new Date(profileData.user.created_at).toLocaleDateString()
+                    : 'N/A'}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'orders':
+        if (ordersLoading) {
+          return <div className="text-center py-8">Loading orders...</div>;
+        }
+
+        const paidOrders = ordersData?.paidOrders || [];
+        const unpaidOrders = ordersData?.unpaidOrders || [];
+        
+        // Aggregate all unpaid orders into one combined bill
+        const aggregatedUnpaidTotal = unpaidOrders.reduce((sum: number, order: Order) => 
+          sum + parseFloat(order.total_amount), 0
+        );
+        const allUnpaidItems = unpaidOrders.flatMap((order: Order) => 
+          order.items.map(item => ({
+            ...item,
+            orderId: order.id,
+            orderDate: order.created_at
+          }))
+        );
+
+        return (
+          <div className="space-y-6">
+            {/* Unpaid Orders - Aggregated */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="w-5 h-5 text-orange-600" />
+                <h3 className="text-xl font-bold text-gray-800">Unpaid Bill</h3>
+                {unpaidOrders.length > 0 && (
+                  <span className="px-2 py-1 bg-orange-100 text-orange-800 text-sm rounded-full">
+                    {unpaidOrders.length} {unpaidOrders.length === 1 ? 'order' : 'orders'}
+                  </span>
+                )}
+              </div>
+              {unpaidOrders.length === 0 ? (
+                <p className="text-gray-600 bg-gray-50 p-4 rounded-lg">No unpaid orders</p>
+              ) : (
+                <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <p className="font-bold text-2xl text-gray-800">Combined Bill</p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {unpaidOrders.length} unpaid {unpaidOrders.length === 1 ? 'order' : 'orders'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Orders: {unpaidOrders.map((o: Order) => `#${o.id}`).join(', ')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-3xl font-bold text-orange-600">
+                        ${aggregatedUnpaidTotal.toFixed(2)}
+                      </p>
+                      <span className="inline-block mt-2 px-3 py-1 bg-orange-200 text-orange-800 text-xs rounded-full font-medium">
+                        Pending Payment
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-2 border-t-2 border-orange-300 pt-4 mb-4">
+                    <p className="text-sm font-semibold text-gray-700 mb-2">All Items:</p>
+                    {allUnpaidItems.map((item: any, index: number) => (
+                      <div key={`${item.orderId}-${item.id}-${index}`} className="flex justify-between text-sm">
+                        <span className="text-gray-700">
+                          {item.quantity}x {item.menuItem.name}
+                          <span className="text-xs text-gray-500 ml-2">(Order #{item.orderId})</span>
+                        </span>
+                        <span className="font-medium text-gray-900">
+                          ${parseFloat(item.unit_price).toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => navigate('/billing')}
+                    className="w-full bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 transition-colors font-bold text-lg shadow-md"
+                  >
+                    Pay ${aggregatedUnpaidTotal.toFixed(2)} Now →
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Paid Orders (Order History) */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <h3 className="text-xl font-bold text-gray-800">Order History (Paid)</h3>
+                <span className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded-full">
+                  {paidOrders.length}
+                </span>
+              </div>
+              {paidOrders.length === 0 ? (
+                <p className="text-gray-600 bg-gray-50 p-4 rounded-lg">No order history yet</p>
+              ) : (
+                <div className="space-y-3">
+                  {paidOrders.map((order: Order) => (
+                    <div
+                      key={order.id}
+                      className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="font-bold text-lg text-gray-800">Order #{order.id}</p>
+                          <p className="text-sm text-gray-600">
+                            {new Date(order.created_at).toLocaleString()}
+                          </p>
+                          {order.payment && (
+                            <p className="text-xs text-green-600 mt-1">
+                              Paid via {order.payment.payment_method}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-green-600">
+                            ${parseFloat(order.total_amount).toFixed(2)}
+                          </p>
+                          <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
+                            Paid
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-2 border-t border-gray-200 pt-3">
+                        {order.items.map((item) => (
+                          <div key={item.id} className="flex justify-between text-sm">
+                            <span className="text-gray-700">
+                              {item.quantity}x {item.menuItem.name}
+                            </span>
+                            <span className="font-medium text-gray-900">
+                              ${parseFloat(item.unit_price).toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'preferences':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Heart className="w-5 h-5 text-red-500" />
+              <h3 className="text-xl font-bold text-gray-800">Food Preferences</h3>
+            </div>
+            <p className="text-gray-600 mb-4">
+              Select your dietary preferences to help us recommend dishes you'll love.
+            </p>
+
+            {prefsLoading ? (
+              <div className="text-center py-8">Loading preferences...</div>
+            ) : (
+              <>
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h4 className="font-medium text-gray-700 mb-3">Available Tags:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {availableTagsData?.tags?.length > 0 ? (
+                      availableTagsData.tags.map((tag: string) => (
+                        <button
+                          key={tag}
+                          onClick={() => toggleTag(tag)}
+                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                            selectedTags.includes(tag)
+                              ? 'bg-indigo-600 text-white shadow-md'
+                              : 'bg-white text-gray-700 border border-gray-300 hover:border-indigo-400'
+                          }`}
+                        >
+                          {selectedTags.includes(tag) && <Check className="w-4 h-4 inline mr-1" />}
+                          {tag}
+                        </button>
+                      ))
+                    ) : (
+                      <p className="text-gray-500">No dietary tags available yet.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-indigo-50 rounded-lg p-6">
+                  <h4 className="font-medium text-gray-700 mb-3">Your Selected Preferences:</h4>
+                  {selectedTags.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-4 py-2 bg-indigo-600 text-white rounded-full text-sm font-medium flex items-center gap-2"
+                        >
+                          {tag}
+                          <button
+                            onClick={() => toggleTag(tag)}
+                            className="hover:bg-indigo-700 rounded-full p-1"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">No preferences selected yet.</p>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => updatePreferencesMutation.mutate(selectedTags)}
+                  disabled={updatePreferencesMutation.isPending}
+                  className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {updatePreferencesMutation.isPending ? 'Saving...' : 'Save Preferences'}
+                </button>
+              </>
+            )}
+          </div>
+        );
+
+      case 'payments':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-blue-600" />
+                <h3 className="text-xl font-bold text-gray-800">Saved Payment Methods</h3>
+              </div>
+              <button
+                onClick={() => setShowAddCard(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                Add Card
+              </button>
+            </div>
+
+            {paymentsLoading ? (
+              <div className="text-center py-8">Loading payment methods...</div>
+            ) : paymentMethodsData?.paymentMethods?.length > 0 ? (
+              <div className="space-y-3">
+                {paymentMethodsData.paymentMethods.map((method: PaymentMethod) => (
+                  <div
+                    key={method.id}
+                    className={`border rounded-lg p-4 ${
+                      method.is_default
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 bg-white'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white font-bold text-xs">
+                          {method.card_brand.toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-800">
+                            •••• •••• •••• {method.last4}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Expires {method.exp_month}/{method.exp_year}
+                          </p>
+                          {method.is_default && (
+                            <span className="inline-block mt-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {!method.is_default && (
+                          <button
+                            onClick={() => setDefaultPaymentMethodMutation.mutate(method.id)}
+                            disabled={setDefaultPaymentMethodMutation.isPending}
+                            className="text-blue-600 hover:text-blue-700 text-sm font-medium disabled:opacity-50"
+                          >
+                            Set Default
+                          </button>
+                        )}
+                        <button
+                          onClick={() => deletePaymentMethodMutation.mutate(method.id)}
+                          disabled={deletePaymentMethodMutation.isPending}
+                          className="text-red-600 hover:text-red-700 disabled:opacity-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-gray-50 rounded-lg p-8 text-center">
+                <CreditCard className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 mb-4">No saved payment methods yet.</p>
+                <p className="text-sm text-gray-500">
+                  Payment methods will be saved automatically when you make your first payment.
+                </p>
+              </div>
+            )}
+
+            {showAddCard && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                  <h3 className="text-xl font-bold text-gray-800 mb-4">Add Payment Method</h3>
+                  <Elements stripe={stripePromise}>
+                    <AddCardForm 
+                      onSuccess={() => {
+                        setShowAddCard(false);
+                        queryClient.invalidateQueries({ queryKey: ['user', 'payment-methods'] });
+                      }}
+                      onCancel={() => setShowAddCard(false)}
+                    />
+                  </Elements>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      default:
+        return null;
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 pt-16">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-xl p-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-6">My Profile</h1>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-4xl font-bold text-gray-800 mb-8">My Profile</h1>
 
-          <div className="space-y-6">
-            {/* Profile Information */}
-            <div className="border-b pb-4">
-              <h2 className="text-xl font-semibold text-gray-700 mb-2">Profile Information</h2>
-              {isLoading ? (
-                <p className="text-gray-600">Loading...</p>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-gray-600">
-                    <span className="font-medium">Email:</span> {user?.email || profileData?.user?.email}
-                  </p>
-                  {profileData?.user?.id && (
-                    <p className="text-gray-600">
-                      <span className="font-medium">User ID:</span> {profileData.user.id}
-                    </p>
-                  )}
-                  {profileData?.user?.name && (
-                    <p className="text-gray-600">
-                      <span className="font-medium">Name:</span> {profileData.user.name}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Ordering History */}
-            <div className="border-b pb-4">
-              <h2 className="text-xl font-semibold text-gray-700 mb-2">Ordering History</h2>
-              {ordersLoading ? (
-                <p className="text-gray-600">Loading...</p>
-              ) : orderHistory?.orders?.length > 0 ? (
-                <div className="space-y-2">
-                  {orderHistory.orders.map((order: any) => (
-                    <div key={order.id} className="bg-gray-50 p-4 rounded-lg">
-                      <p className="font-medium">Order #{order.id}</p>
-                      <p className="text-sm text-gray-600">Date: {new Date(order.created_at).toLocaleDateString()}</p>
-                      <p className="text-sm text-gray-600">Total: ${order.total}</p>
-                      <p className="text-sm text-gray-600">Status: {order.status}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-600">No orders yet.</p>
-              )}
-            </div>
-
-            {/* Food Preferences */}
-            <div className="border-b pb-4">
-              <h2 className="text-xl font-semibold text-gray-700 mb-2">Food Preferences</h2>
-              {prefsLoading ? (
-                <p className="text-gray-600">Loading...</p>
-              ) : preferences?.preferences ? (
-                <div className="space-y-2">
-                  {preferences.preferences.map((pref: string) => (
-                    <span key={pref} className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full mr-2 mb-2">
-                      {pref}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-600">No preferences set.</p>
-              )}
-            </div>
-
-            {/* Payment Options */}
-            <div className="border-b pb-4">
-              <h2 className="text-xl font-semibold text-gray-700 mb-2">Payment Options</h2>
-              {paymentLoading ? (
-                <p className="text-gray-600">Loading...</p>
-              ) : paymentOptions?.paymentOptions?.length > 0 ? (
-                <div className="space-y-2">
-                  {paymentOptions.paymentOptions.map((option: any) => (
-                    <div key={option.id} className="bg-gray-50 p-4 rounded-lg">
-                      <p className="font-medium">{option.type}</p>
-                      <p className="text-sm text-gray-600">**** **** **** {option.last4}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-600">No payment options saved.</p>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="pt-4">
+        {/* Tabs */}
+        <div className="bg-white rounded-lg shadow-xl overflow-hidden">
+          <div className="border-b border-gray-200">
+            <nav className="flex">
               <button
-                onClick={handleViewMenu}
-                className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                onClick={() => setActiveTab('profile')}
+                className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${
+                  activeTab === 'profile'
+                    ? 'border-b-2 border-indigo-600 text-indigo-600 bg-indigo-50'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                }`}
               >
-                Browse Menu
+                <User className="w-5 h-5" />
+                Profile
               </button>
-            </div>
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${
+                  activeTab === 'orders'
+                    ? 'border-b-2 border-indigo-600 text-indigo-600 bg-indigo-50'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                <Receipt className="w-5 h-5" />
+                Orders
+              </button>
+              <button
+                onClick={() => setActiveTab('preferences')}
+                className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${
+                  activeTab === 'preferences'
+                    ? 'border-b-2 border-indigo-600 text-indigo-600 bg-indigo-50'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                <Heart className="w-5 h-5" />
+                Preferences
+              </button>
+              <button
+                onClick={() => setActiveTab('payments')}
+                className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${
+                  activeTab === 'payments'
+                    ? 'border-b-2 border-indigo-600 text-indigo-600 bg-indigo-50'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                <CreditCard className="w-5 h-5" />
+                Payment Methods
+              </button>
+            </nav>
           </div>
+
+          {/* Tab Content */}
+          <div className="p-6">{renderTabContent()}</div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mt-8 flex gap-4">
+          <button
+            onClick={() => navigate('/menu/customer')}
+            className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-lg"
+          >
+            Browse Menu
+          </button>
+          <button
+            onClick={() => navigate('/orders')}
+            className="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium shadow-lg"
+          >
+            My Orders
+          </button>
         </div>
       </div>
     </div>
+  );
+}
+
+// Add Card Form Component using Stripe Elements
+function AddCardForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setProcessing(true);
+    setError(null);
+
+    try {
+      const cardElement = elements.getElement(CardElement);
+      
+      if (!cardElement) {
+        throw new Error('Card element not found');
+      }
+
+      // Create payment method with Stripe
+      const { error: stripeError, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+      });
+
+      if (stripeError) {
+        throw new Error(stripeError.message);
+      }
+
+      if (!paymentMethod) {
+        throw new Error('Failed to create payment method');
+      }
+
+      // Save payment method to backend
+      await apiClient.post('/user/payment-methods', {
+        stripe_payment_method_id: paymentMethod.id,
+        card_brand: paymentMethod.card?.brand || 'unknown',
+        last4: paymentMethod.card?.last4 || '0000',
+        exp_month: paymentMethod.card?.exp_month || 1,
+        exp_year: paymentMethod.card?.exp_year || 2024,
+        is_default: false,
+      });
+
+      toast.success('Payment method added successfully!');
+      onSuccess();
+    } catch (err: any) {
+      console.error('Error adding card:', err);
+      setError(err.message || 'Failed to add payment method');
+      toast.error(err.message || 'Failed to add payment method');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="border border-gray-300 rounded-lg p-3">
+        <CardElement
+          options={{
+            style: {
+              base: {
+                fontSize: '16px',
+                color: '#424770',
+                '::placeholder': {
+                  color: '#aab7c4',
+                },
+              },
+              invalid: {
+                color: '#9e2146',
+              },
+            },
+          }}
+        />
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
+      <div className="flex gap-3">
+        <button
+          type="submit"
+          disabled={!stripe || processing}
+          className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+        >
+          {processing ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Adding...
+            </>
+          ) : (
+            'Add Card'
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={processing}
+          className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium disabled:opacity-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 }

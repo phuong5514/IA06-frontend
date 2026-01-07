@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { CreditCard, Banknote, Receipt, ArrowLeft, Loader2 } from 'lucide-react';
+import { CreditCard, Banknote, Receipt, ArrowLeft, Loader2, Cross } from 'lucide-react';
 import { apiClient } from '../config/api';
 import DashboardLayout from '../components/DashboardLayout';
 
@@ -55,10 +55,32 @@ const CustomerBilling = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [currentPayment, setCurrentPayment] = useState<Payment | null>(null);
   const [showStripeForm, setShowStripeForm] = useState(false);
+  const [savedCards, setSavedCards] = useState<any[]>([]);
+  const [selectedCard, setSelectedCard] = useState<number | null>(null);
+  const [useNewCard, setUseNewCard] = useState(false);
+  const [showAddCardModal, setShowAddCardModal] = useState(false);
 
   useEffect(() => {
     fetchBillingInfo();
+    fetchSavedCards();
   }, []);
+
+  const fetchSavedCards = async () => {
+    try {
+      const response = await apiClient.get('/user/payment-methods');
+      if (response.data.paymentMethods?.length > 0) {
+        setSavedCards(response.data.paymentMethods);
+        // Auto-select default card
+        const defaultCard = response.data.paymentMethods.find((card: any) => card.is_default);
+        if (defaultCard) {
+          setSelectedCard(defaultCard.id);
+          setPaymentMethod('stripe');
+        }
+      }
+    } catch (error: any) {
+      console.error('Error fetching saved cards:', error);
+    }
+  };
 
   const fetchBillingInfo = async () => {
     try {
@@ -82,23 +104,67 @@ const CustomerBilling = () => {
     try {
       setProcessingPayment(true);
       
+      // If paying with cash
+      if (paymentMethod === 'cash') {
+        await apiClient.post(
+          '/payments',
+          {
+            orderIds: billingInfo.unpaidOrders,
+            paymentMethod,
+          }
+        );
+        toast.success('Cash payment initiated. Please pay at the counter.');
+        setTimeout(() => navigate('/orders'), 2000);
+        return;
+      }
+
+      // If paying with saved card
+      if (selectedCard) {
+        const selectedCardData = savedCards.find(card => card.id === selectedCard);
+        if (!selectedCardData) {
+          toast.error('Selected card not found');
+          return;
+        }
+
+        // Create payment and charge using saved payment method
+        const response = await apiClient.post(
+          '/payments',
+          {
+            orderIds: billingInfo.unpaidOrders,
+            paymentMethod: 'stripe',
+          }
+        );
+
+        const paymentId = response.data.payment.id;
+
+        // Charge using saved payment method
+        const chargeResponse = await apiClient.post(
+          `/payments/${paymentId}/charge-saved-card`,
+          {
+            paymentMethodId: selectedCardData.stripe_payment_method_id,
+          }
+        );
+
+        if (chargeResponse.data.success) {
+          toast.success('Payment successful!');
+          setTimeout(() => navigate('/orders'), 2000);
+        } else {
+          toast.error('Payment failed');
+        }
+        return;
+      }
+
+      // If paying with new card, create payment and show form
       const response = await apiClient.post(
         '/payments',
         {
           orderIds: billingInfo.unpaidOrders,
-          paymentMethod,
+          paymentMethod: 'stripe',
         }
       );
 
       setCurrentPayment(response.data);
-      
-      if (paymentMethod === 'cash') {
-        toast.success('Cash payment initiated. Please pay at the counter.');
-        setTimeout(() => navigate('/orders'), 2000);
-      } else {
-        // For Stripe payment, show the payment form
-        setShowStripeForm(true);
-      }
+      setShowStripeForm(true);
     } catch (error: any) {
       console.error('Error initiating payment:', error);
       toast.error(error.response?.data?.message || 'Failed to initiate payment');
@@ -228,32 +294,135 @@ const CustomerBilling = () => {
             <div className="mt-8 pt-6 border-t">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Payment Method</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button
-                  onClick={() => setPaymentMethod('cash')}
-                  className={`p-4 border-2 rounded-lg flex items-center justify-center transition-all ${
-                    paymentMethod === 'cash'
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <Banknote className={`w-6 h-6 mr-3 ${
-                    paymentMethod === 'cash' ? 'text-blue-600' : 'text-gray-400'
-                  }`} />
-                  <div className="text-left">
-                    <p className="font-semibold text-gray-800">Cash Payment</p>
-                    <p className="text-sm text-gray-600">Pay at the counter</p>
+              {/* Saved Cards Section */}
+              {savedCards.length > 0 && !useNewCard && (
+                <div className="mb-6">
+                  <h4 className="text-md font-medium text-gray-700 mb-3">Saved Cards</h4>
+                  <div className="space-y-2">
+                    {savedCards.map((card) => (
+                      <button
+                        key={card.id}
+                        onClick={() => {
+                          setSelectedCard(card.id);
+                          setPaymentMethod('stripe');
+                        }}
+                        className={`w-full p-4 border-2 rounded-lg flex items-center justify-between transition-all ${
+                          selectedCard === card.id && paymentMethod === 'stripe'
+                            ? 'border-blue-600 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          <CreditCard className={`w-6 h-6 mr-3 ${
+                            selectedCard === card.id && paymentMethod === 'stripe' ? 'text-blue-600' : 'text-gray-400'
+                          }`} />
+                          <div className="text-left">
+                            <p className="font-semibold text-gray-800">
+                              {card.card_brand.toUpperCase()} •••• {card.last4}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Expires {card.exp_month}/{card.exp_year}
+                              {card.is_default && (
+                                <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                  Default
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        {selectedCard === card.id && paymentMethod === 'stripe' && (
+                          <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                    ))}
                   </div>
-                </button>
+                  <button
+                    onClick={() => {
+                      setShowAddCardModal(true);
+                    }}
+                    className="mt-3 text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center"
+                  >
+                    <Cross className="w-4 h-4 mr-1" />
+                    Use a different card
+                  </button>
+                </div>
+              )}
 
-                <button
-                  onClick={() => setPaymentMethod('stripe')}
-                  className={`p-4 border-2 rounded-lg flex items-center justify-center transition-all ${
-                    paymentMethod === 'stripe'
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
+              {/* Payment Method Options */}
+              {(savedCards.length === 0 || useNewCard) && (
+                <>
+                  {savedCards.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setUseNewCard(false);
+                        const defaultCard = savedCards.find((card) => card.is_default);
+                        if (defaultCard) {
+                          setSelectedCard(defaultCard.id);
+                          setPaymentMethod('stripe');
+                        }
+                      }}
+                      className="mb-4 text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-1" />
+                      Back to saved cards
+                    </button>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button
+                      onClick={() => {
+                        setPaymentMethod('cash');
+                        setSelectedCard(null);
+                      }}
+                      className={`p-4 border-2 rounded-lg flex items-center justify-center transition-all ${
+                        paymentMethod === 'cash'
+                          ? 'border-blue-600 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <Banknote className={`w-6 h-6 mr-3 ${
+                        paymentMethod === 'cash' ? 'text-blue-600' : 'text-gray-400'
+                      }`} />
+                      <div className="text-left">
+                        <p className="font-semibold text-gray-800">Cash Payment</p>
+                        <p className="text-sm text-gray-600">Pay at the counter</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setPaymentMethod('stripe');
+                        setSelectedCard(null);
+                      }}
+                      className={`p-4 border-2 rounded-lg flex items-center justify-center transition-all ${
+                        paymentMethod === 'stripe' && !selectedCard
+                          ? 'border-blue-600 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <CreditCard className={`w-6 h-6 mr-3 ${
+                        paymentMethod === 'stripe' && !selectedCard ? 'text-blue-600' : 'text-gray-400'
+                      }`} />
+                      <div className="text-left">
+                        <p className="font-semibold text-gray-800">New Card</p>
+                        <p className="text-sm text-gray-600">Pay online with Stripe</p>
+                      </div>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+              <div
+                className={`p-4 border-2 rounded-lg flex items-center justify-center transition-all ${
+                  paymentMethod === 'stripe'
+                    ? 'border-blue-600 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <button>
                   <CreditCard className={`w-6 h-6 mr-3 ${
                     paymentMethod === 'stripe' ? 'text-blue-600' : 'text-gray-400'
                   }`} />
@@ -298,9 +467,158 @@ const CustomerBilling = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Add Card Modal */}
+      {showAddCardModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Add New Card</h3>
+            <Elements stripe={stripePromise}>
+              <AddCardForm
+                onSuccess={async () => {
+                  setShowAddCardModal(false);
+                  await fetchSavedCards();
+                  toast.success('Card added successfully!');
+                }}
+                onCancel={() => setShowAddCardModal(false)}
+              />
+            </Elements>
+          </div>
+        </div>
+      )}
+    </DashboardLayout>
+  );
+};
+
+// Add Card Form Component
+const AddCardForm = ({
+  onSuccess,
+  onCancel,
+}: {
+  onSuccess: () => void;
+  onCancel: () => void;
+}) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+  const [cardholderName, setCardholderName] = useState('');
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setProcessing(true);
+
+    try {
+      const cardElement = elements.getElement(CardElement);
+      
+      if (!cardElement) {
+        throw new Error('Card element not found');
+      }
+
+      // Create payment method with Stripe
+      const { error, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+        billing_details: cardholderName ? { name: cardholderName } : undefined,
+      });
+
+      if (error) {
+        toast.error(error.message || 'Failed to add card');
+        return;
+      }
+
+      if (!paymentMethod) {
+        toast.error('Failed to create payment method');
+        return;
+      }
+
+      // Save payment method to backend
+      await apiClient.post('/user/payment-methods', {
+        stripe_payment_method_id: paymentMethod.id,
+        card_brand: paymentMethod.card?.brand || 'unknown',
+        last4: paymentMethod.card?.last4 || '0000',
+        exp_month: paymentMethod.card?.exp_month || 12,
+        exp_year: paymentMethod.card?.exp_year || 2099,
+      });
+
+      onSuccess();
+    } catch (error: any) {
+      console.error('Error adding card:', error);
+      toast.error(error.response?.data?.message || 'Failed to add card');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Cardholder Name (Optional)
+        </label>
+        <input
+          type="text"
+          value={cardholderName}
+          onChange={(e) => setCardholderName(e.target.value)}
+          placeholder="John Doe"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Card Details
+        </label>
+        <div className="p-4 border border-gray-300 rounded-lg">
+          <CardElement
+            options={{
+              style: {
+                base: {
+                  fontSize: '16px',
+                  color: '#424770',
+                  '::placeholder': {
+                    color: '#aab7c4',
+                  },
+                },
+                invalid: {
+                  color: '#9e2146',
+                },
+              },
+            }}
+          />
         </div>
       </div>
-    </DashboardLayout>
+
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={processing}
+          className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={!stripe || processing}
+          className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
+        >
+          {processing ? (
+            <>
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              Adding...
+            </>
+          ) : (
+            'Add Card'
+          )}
+        </button>
+      </div>
+    </form>
   );
 };
 
