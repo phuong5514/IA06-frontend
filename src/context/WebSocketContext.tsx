@@ -123,13 +123,14 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     }
 
     console.log('[WebSocketContext] Registering orderStatusChange listener');
-    socket.on('orderStatusChange', (order: Order, previousStatus: string) => {
+    const handler = (order: Order, previousStatus: string) => {
       console.log('[WebSocketContext] orderStatusChange event received:', { order, previousStatus });
       callback(order, previousStatus);
-    });
+    };
+    socket.on('orderStatusChange', handler);
     return () => {
       console.log('[WebSocketContext] Unregistering orderStatusChange listener');
-      socket.off('orderStatusChange', callback);
+      socket.off('orderStatusChange', handler);
     };
   }, [socket]);
 
@@ -140,13 +141,14 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     }
 
     console.log('[WebSocketContext] Registering orderAccepted listener');
-    socket.on('orderAccepted', (order: Order) => {
+    const handler = (order: Order) => {
       console.log('[WebSocketContext] orderAccepted event received:', order);
       callback(order);
-    });
+    };
+    socket.on('orderAccepted', handler);
     return () => {
       console.log('[WebSocketContext] Unregistering orderAccepted listener');
-      socket.off('orderAccepted', callback);
+      socket.off('orderAccepted', handler);
     };
   }, [socket]);
 
@@ -157,13 +159,14 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     }
 
     console.log('[WebSocketContext] Registering orderRejected listener');
-    socket.on('orderRejected', (order: Order) => {
+    const handler = (order: Order) => {
       console.log('[WebSocketContext] orderRejected event received:', order);
       callback(order);
-    });
+    };
+    socket.on('orderRejected', handler);
     return () => {
       console.log('[WebSocketContext] Unregistering orderRejected listener');
-      socket.off('orderRejected', callback);
+      socket.off('orderRejected', handler);
     };
   }, [socket]);
 

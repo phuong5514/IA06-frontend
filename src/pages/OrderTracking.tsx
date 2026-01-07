@@ -87,6 +87,12 @@ export default function OrderTracking() {
               icon: '🎉',
             });
             break;
+          case 'rejected':
+            toast.error(`❌ Your order has been rejected${updatedOrder.rejection_reason ? `: ${updatedOrder.rejection_reason}` : ''}`, {
+              duration: 7000,
+              icon: '😔',
+            });
+            break;
           case 'preparing':
             toast.success('👨‍🍳 Your order is being prepared!', {
               duration: 5000,
@@ -128,24 +134,18 @@ export default function OrderTracking() {
     const unsubscribeAccepted = onOrderAccepted((updatedOrder) => {
       console.log('[OrderTracking] orderAccepted event received:', updatedOrder);
       if (updatedOrder.id === parseInt(orderId)) {
-        console.log('[OrderTracking] Order accepted for current order:', updatedOrder);
-        toast.success('✅ Your order has been accepted!', {
-          duration: 5000,
-          icon: '🎉',
-        });
-        fetchOrder(orderId);
+        console.log('[OrderTracking] Order accepted for current order - skipping toast (handled by orderStatusChange)');
+        // Note: We don't show toast here because orderStatusChange will handle it
+        // This prevents duplicate notifications
       }
     });
 
     const unsubscribeRejected = onOrderRejected((updatedOrder) => {
       console.log('[OrderTracking] orderRejected event received:', updatedOrder);
       if (updatedOrder.id === parseInt(orderId)) {
-        console.log('[OrderTracking] Order rejected for current order:', updatedOrder);
-        toast.error(`❌ Your order has been rejected${updatedOrder.rejection_reason ? `: ${updatedOrder.rejection_reason}` : ''}`, {
-          duration: 7000,
-          icon: '😔',
-        });
-        fetchOrder(orderId);
+        console.log('[OrderTracking] Order rejected for current order - skipping toast (handled by orderStatusChange)');
+        // Note: We don't show toast here because orderStatusChange will handle it
+        // This prevents duplicate notifications
       }
     });
 

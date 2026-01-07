@@ -75,8 +75,12 @@ export default function MenuCustomer() {
               duration: 5000,
               icon: '🎉',
             });
-            break;
-          case 'preparing':
+            break;          case 'rejected':
+            toast.error(`❌ Order #${order.id} has been rejected${order.rejection_reason ? `: ${order.rejection_reason}` : ''}`, {
+              duration: 7000,
+              icon: '😔',
+            });
+            break;          case 'preparing':
             toast.success(`👨‍🍳 Order #${order.id} is being prepared!`, {
               duration: 5000,
               icon: '🍳',
@@ -114,23 +118,15 @@ export default function MenuCustomer() {
     const unsubscribeAccepted = onOrderAccepted((order) => {
       console.log('[MenuCustomer] Order accepted:', order, 'user.id:', user.id);
       console.log('[MenuCustomer] Comparing order.user_id:', order.user_id, 'with user.id:', user.id, 'match:', order.user_id === String(user.id));
-      if (order.user_id === String(user.id)) {
-        toast.success(`✅ Order #${order.id} has been accepted!`, {
-          duration: 5000,
-          icon: '🎉',
-        });
-      }
+      // Note: We don't show toast here because orderStatusChange will handle it
+      // This prevents duplicate notifications
     });
 
     const unsubscribeRejected = onOrderRejected((order) => {
       console.log('[MenuCustomer] Order rejected:', order, 'user.id:', user.id);
       console.log('[MenuCustomer] Comparing order.user_id:', order.user_id, 'with user.id:', user.id, 'match:', order.user_id === String(user.id));
-      if (order.user_id === String(user.id)) {
-        toast.error(`❌ Order #${order.id} has been rejected${order.rejection_reason ? `: ${order.rejection_reason}` : ''}`, {
-          duration: 7000,
-          icon: '😔',
-        });
-      }
+      // Note: We don't show toast here because orderStatusChange will handle it
+      // This prevents duplicate notifications
     });
 
     return () => {
