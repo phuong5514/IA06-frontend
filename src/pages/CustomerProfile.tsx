@@ -59,6 +59,13 @@ export default function CustomerProfile() {
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showAddCard, setShowAddCard] = useState(false);
+  
+  // Order history pagination, search, and filter states
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
+  const [orderSortBy, setOrderSortBy] = useState<'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'>('date-desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   // Fetch user profile
   const { data: profileData } = useQuery({
@@ -93,6 +100,11 @@ export default function CustomerProfile() {
       setSelectedTags(preferencesData.preferences.dietary_tags);
     }
   }, [preferencesData]);
+
+  // Reset pagination to page 1 when order filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [orderSearchQuery, orderStatusFilter, orderSortBy, itemsPerPage]);
 
   // Fetch available dietary tags
   const { data: availableTagsData } = useQuery({
@@ -211,8 +223,60 @@ export default function CustomerProfile() {
           return <div className="text-center py-8">Loading orders...</div>;
         }
 
+        const allOrders = ordersData?.orders || [];
         const paidOrders = ordersData?.paidOrders || [];
         const unpaidOrders = ordersData?.unpaidOrders || [];
+        
+        // Filter orders based on status filter
+        let filteredOrders = orderStatusFilter === 'paid' ? paidOrders : 
+                            orderStatusFilter === 'unpaid' ? unpaidOrders : 
+                            allOrders;
+        
+        // Search functionality
+        if (orderSearchQuery.trim()) {
+          const query = orderSearchQuery.toLowerCase();
+          filteredOrders = filteredOrders.filter((order: Order) => {
+            // Search by order ID
+            if (order.id.toString().includes(query)) return true;
+            
+            // Search by item names
+            const hasMatchingItem = order.items.some((item: any) => 
+              item.menuItem.name.toLowerCase().includes(query)
+            );
+            if (hasMatchingItem) return true;
+            
+            // Search by payment method
+            if (order.payment?.payment_method?.toLowerCase().includes(query)) return true;
+            
+            // Search by amount
+            if (order.total_amount.toString().includes(query)) return true;
+            
+            return false;
+          });
+        }
+        
+        // Sort orders
+        const sortedOrders = [...filteredOrders].sort((a: Order, b: Order) => {
+          switch (orderSortBy) {
+            case 'date-desc':
+              return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            case 'date-asc':
+              return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+            case 'amount-desc':
+              return parseFloat(b.total_amount) - parseFloat(a.total_amount);
+            case 'amount-asc':
+              return parseFloat(a.total_amount) - parseFloat(b.total_amount);
+            default:
+              return 0;
+          }
+        });
+        
+        // Pagination
+        const totalItems = sortedOrders.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedOrders = sortedOrders.slice(startIndex, endIndex);
         
         // Aggregate all unpaid orders into one combined bill
         const aggregatedUnpaidTotal = unpaidOrders.reduce((sum: number, order: Order) => 
@@ -228,6 +292,95 @@ export default function CustomerProfile() {
 
         return (
           <div className="space-y-6">
+            {/* Search, Filter, and Sort Controls */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Order Management</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Search */}
+                <div className="lg:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Search Orders
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={orderSearchQuery}
+                      onChange={(e) => setOrderSearchQuery(e.target.value)}
+                      placeholder="Search by order #, item name, amount..."
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <svg
+                      className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Status Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status
+                  </label>
+                  <select
+                    value={orderStatusFilter}
+                    onChange={(e) => setOrderStatusFilter(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="all">All Orders</option>
+                    <option value="paid">Paid Only</option>
+                    <option value="unpaid">Unpaid Only</option>
+                  </select>
+                </div>
+
+                {/* Sort By */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sort By
+                  </label>
+                  <select
+                    value={orderSortBy}
+                    onChange={(e) => setOrderSortBy(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="date-desc">Newest First</option>
+                    <option value="date-asc">Oldest First</option>
+                    <option value="amount-desc">Highest Amount</option>
+                    <option value="amount-asc">Lowest Amount</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Results Summary */}
+              <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+                <span>
+                  Showing {totalItems === 0 ? 0 : startIndex + 1} - {Math.min(endIndex, totalItems)} of {totalItems} orders
+                </span>
+                <div className="flex items-center gap-2">
+                  <span>Per page:</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                    className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             {/* Unpaid Orders - Aggregated */}
             <div>
               <div className="flex items-center gap-2 mb-4">
@@ -286,60 +439,166 @@ export default function CustomerProfile() {
               )}
             </div>
 
-            {/* Paid Orders (Order History) */}
+            {/* All Orders (Filtered, Sorted, and Paginated) */}
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <h3 className="text-xl font-bold text-gray-800">Order History (Paid)</h3>
-                <span className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded-full">
-                  {paidOrders.length}
+                {orderStatusFilter === 'paid' ? (
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                ) : orderStatusFilter === 'unpaid' ? (
+                  <Clock className="w-5 h-5 text-orange-600" />
+                ) : (
+                  <Receipt className="w-5 h-5 text-indigo-600" />
+                )}
+                <h3 className="text-xl font-bold text-gray-800">
+                  {orderStatusFilter === 'paid' ? 'Paid Orders' : 
+                   orderStatusFilter === 'unpaid' ? 'Unpaid Orders' : 
+                   'All Orders'}
+                </h3>
+                <span className="px-2 py-1 bg-indigo-100 text-indigo-800 text-sm rounded-full">
+                  {totalItems}
                 </span>
               </div>
-              {paidOrders.length === 0 ? (
-                <p className="text-gray-600 bg-gray-50 p-4 rounded-lg">No order history yet</p>
-              ) : (
-                <div className="space-y-3">
-                  {paidOrders.map((order: Order) => (
-                    <div
-                      key={order.id}
-                      className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+              
+              {paginatedOrders.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-lg">
+                  <Receipt className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-600 text-lg font-medium mb-2">
+                    {orderSearchQuery ? 'No orders found' : 'No orders yet'}
+                  </p>
+                  <p className="text-gray-500 text-sm">
+                    {orderSearchQuery ? 'Try adjusting your search or filters' : 'Your order history will appear here'}
+                  </p>
+                  {orderSearchQuery && (
+                    <button
+                      onClick={() => {
+                        setOrderSearchQuery('');
+                        setOrderStatusFilter('all');
+                      }}
+                      className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                     >
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <p className="font-bold text-lg text-gray-800">Order #{order.id}</p>
-                          <p className="text-sm text-gray-600">
-                            {new Date(order.created_at).toLocaleString()}
-                          </p>
-                          {order.payment && (
-                            <p className="text-xs text-green-600 mt-1">
-                              Paid via {order.payment.payment_method}
+                      Clear Filters
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    {paginatedOrders.map((order: Order) => (
+                      <div
+                        key={order.id}
+                        className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <p className="font-bold text-lg text-gray-800">Order #{order.id}</p>
+                            <p className="text-sm text-gray-600">
+                              {new Date(order.created_at).toLocaleString()}
                             </p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-green-600">
-                            ${parseFloat(order.total_amount).toFixed(2)}
-                          </p>
-                          <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">
-                            Paid
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-2 border-t border-gray-200 pt-3">
-                        {order.items.map((item) => (
-                          <div key={item.id} className="flex justify-between text-sm">
-                            <span className="text-gray-700">
-                              {item.quantity}x {item.menuItem.name}
-                            </span>
-                            <span className="font-medium text-gray-900">
-                              ${parseFloat(item.unit_price).toFixed(2)}
+                            {order.payment && (
+                              <p className="text-xs text-green-600 mt-1">
+                                Paid via {order.payment.payment_method}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-gray-800">
+                              ${parseFloat(order.total_amount).toFixed(2)}
+                            </p>
+                            <span className={`inline-block px-3 py-1 text-xs rounded-full font-medium ${
+                              order.isPaid 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-orange-100 text-orange-800'
+                            }`}>
+                              {order.isPaid ? 'Paid' : 'Unpaid'}
                             </span>
                           </div>
-                        ))}
+                        </div>
+                        <div className="space-y-2 border-t border-gray-200 pt-3">
+                          {order.items.map((item) => (
+                            <div key={item.id} className="flex justify-between text-sm">
+                              <span className="text-gray-700">
+                                {item.quantity}x {item.menuItem.name}
+                              </span>
+                              <span className="font-medium text-gray-900">
+                                ${parseFloat(item.unit_price).toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
+                    ))}
+                  </div>
+
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="mt-6 flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => setCurrentPage(1)}
+                        disabled={currentPage === 1}
+                        className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="First page"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Previous
+                      </button>
+                      
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter(page => {
+                            // Show first page, last page, current page, and pages around current
+                            return page === 1 || 
+                                   page === totalPages || 
+                                   Math.abs(page - currentPage) <= 1;
+                          })
+                          .map((page, index, array) => (
+                            <div key={page} className="flex items-center">
+                              {index > 0 && array[index - 1] !== page - 1 && (
+                                <span className="px-2 text-gray-400">...</span>
+                              )}
+                              <button
+                                onClick={() => setCurrentPage(page)}
+                                className={`px-4 py-2 rounded-lg transition-colors ${
+                                  currentPage === page
+                                    ? 'bg-indigo-600 text-white font-bold'
+                                    : 'border border-gray-300 hover:bg-gray-50'
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                      
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Next
+                      </button>
+                      
+                      <button
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="Last page"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                        </svg>
+                      </button>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </div>
           </div>
