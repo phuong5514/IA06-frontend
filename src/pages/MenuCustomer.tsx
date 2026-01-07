@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
 import { apiClient } from '../config/api';
 import { useTableSession } from '../context/TableSessionContext';
 import { useAuth } from '../context/AuthContext';
+import { useWebSocket } from '../context/WebSocketContext';
 import { useQuery } from '@tanstack/react-query';
 import QRScannerModal from '../components/QRScannerModal';
 import menuBackground from '../assets/menu_background.png';
@@ -42,6 +44,7 @@ export default function MenuCustomer() {
   const { addItem, setTableId } = useCart();
   const { session, isSessionActive } = useTableSession();
   const { user } = useAuth();
+  const { onOrderStatusChange, onOrderAccepted, onOrderRejected, isConnected } = useWebSocket();
   
   // Set default section based on user login status
   const [activeSection, setActiveSection] = useState<ViewSection>(user ? 'preferences' : 'explore');
@@ -52,6 +55,91 @@ export default function MenuCustomer() {
       setActiveSection('explore');
     }
   }, [user]);
+
+  // WebSocket event listeners for real-time order updates
+  useEffect(() => {
+    if (!user) return; // Only listen if user is logged in
+
+    console.log('[MenuCustomer] Setting up WebSocket listeners for user:', user.id);
+    console.log('[MenuCustomer] WebSocket connected:', isConnected);
+
+    const unsubscribeStatusChange = onOrderStatusChange((order, previousStatus) => {
+      console.log('[MenuCustomer] Order status changed:', order, 'previous:', previousStatus, 'user.id:', user.id);
+      console.log('[MenuCustomer] Comparing order.user_id:', order.user_id, 'with user.id:', user.id, 'match:', order.user_id === String(user.id));
+      
+      // Show toast notification based on status for user's orders
+      if (order.user_id === String(user.id)) {
+        switch (order.status) {
+          case 'accepted':
+            toast.success(`✅ Order #${order.id} has been accepted!`, {
+              duration: 5000,
+              icon: '🎉',
+            });
+            break;
+          case 'preparing':
+            toast.success(`👨‍🍳 Order #${order.id} is being prepared!`, {
+              duration: 5000,
+              icon: '🍳',
+            });
+            break;
+          case 'ready':
+            toast.success(`🎊 Order #${order.id} is ready!`, {
+              duration: 6000,
+              icon: '✨',
+              style: {
+                background: '#10b981',
+                color: '#fff',
+              },
+            });
+            break;
+          case 'served':
+            toast.success(`🍽️ Order #${order.id} has been served!`, {
+              duration: 4000,
+            });
+            break;
+          case 'completed':
+            toast.success(`✓ Order #${order.id} completed. Thank you!`, {
+              duration: 3000,
+            });
+            break;
+          case 'cancelled':
+            toast.error(`Order #${order.id} has been cancelled`, {
+              duration: 5000,
+            });
+            break;
+        }
+      }
+    });
+
+    const unsubscribeAccepted = onOrderAccepted((order) => {
+      console.log('[MenuCustomer] Order accepted:', order, 'user.id:', user.id);
+      console.log('[MenuCustomer] Comparing order.user_id:', order.user_id, 'with user.id:', user.id, 'match:', order.user_id === String(user.id));
+      if (order.user_id === String(user.id)) {
+        toast.success(`✅ Order #${order.id} has been accepted!`, {
+          duration: 5000,
+          icon: '🎉',
+        });
+      }
+    });
+
+    const unsubscribeRejected = onOrderRejected((order) => {
+      console.log('[MenuCustomer] Order rejected:', order, 'user.id:', user.id);
+      console.log('[MenuCustomer] Comparing order.user_id:', order.user_id, 'with user.id:', user.id, 'match:', order.user_id === String(user.id));
+      if (order.user_id === String(user.id)) {
+        toast.error(`❌ Order #${order.id} has been rejected${order.rejection_reason ? `: ${order.rejection_reason}` : ''}`, {
+          duration: 7000,
+          icon: '😔',
+        });
+      }
+    });
+
+    return () => {
+      console.log('[MenuCustomer] Cleaning up WebSocket listeners');
+      unsubscribeStatusChange();
+      unsubscribeAccepted();
+      unsubscribeRejected();
+    };
+  }, [user, onOrderStatusChange, onOrderAccepted, onOrderRejected]);
 
   // Fetch user preferences
   const { data: preferencesData } = useQuery({
