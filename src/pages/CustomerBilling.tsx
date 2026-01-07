@@ -59,6 +59,7 @@ const CustomerBilling = () => {
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [useNewCard, setUseNewCard] = useState(false);
   const [showAddCardModal, setShowAddCardModal] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBillingInfo();
@@ -137,19 +138,44 @@ const CustomerBilling = () => {
 
         const paymentId = response.data.payment.id;
 
-        // Charge using saved payment method
-        const chargeResponse = await apiClient.post(
-          `/payments/${paymentId}/charge-saved-card`,
-          {
-            paymentMethodId: selectedCardData.stripe_payment_method_id,
-          }
-        );
+        try {
+          // Charge using saved payment method
+          const chargeResponse = await apiClient.post(
+            `/payments/${paymentId}/charge-saved-card`,
+            {
+              paymentMethodId: selectedCardData.stripe_payment_method_id,
+            }
+          );
 
-        if (chargeResponse.data.success) {
-          toast.success('Payment successful!');
-          setTimeout(() => navigate('/orders'), 2000);
-        } else {
-          toast.error('Payment failed');
+          if (chargeResponse.data.success) {
+            toast.success('Payment successful!');
+            setPaymentError(null);
+            setTimeout(() => navigate('/orders'), 2000);
+          } else {
+            setPaymentError('Payment was declined. Please try another payment method.');
+            toast.error('Payment failed');
+          }
+        } catch (chargeError: any) {
+          const errorMessage = chargeError.response?.data?.message || chargeError.message || 'Payment failed';
+          
+          // Categorize error types for saved cards
+          if (errorMessage.includes('card was declined') || errorMessage.includes('declined')) {
+            setPaymentError('Your card was declined. Please check your card details or try another card.');
+            toast.error('Card declined');
+          } else if (errorMessage.includes('insufficient funds')) {
+            setPaymentError('Insufficient funds. Please use another payment method.');
+            toast.error('Insufficient funds');
+          } else if (errorMessage.includes('expired')) {
+            setPaymentError('Your card has expired. Please update your card or use another payment method.');
+            toast.error('Card expired');
+          } else if (errorMessage.includes('cannot be reused') || errorMessage.includes('add your card again')) {
+            setPaymentError('This saved card cannot be used. Please delete it and add your card again.');
+            toast.error('Card needs to be re-added');
+          } else {
+            setPaymentError(errorMessage);
+            toast.error(errorMessage);
+          }
+          return;
         }
         return;
       }
@@ -213,7 +239,12 @@ const CustomerBilling = () => {
           payment={currentPayment}
           onSuccess={() => {
             toast.success('Payment successful!');
+            setPaymentError(null);
             navigate('/orders');
+          }}
+          onError={(error) => {
+            setPaymentError(error);
+            setShowStripeForm(false);
           }}
           onCancel={() => {
             setShowStripeForm(false);
@@ -237,6 +268,64 @@ const CustomerBilling = () => {
         </button>
 
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          {/* Payment Error Alert */}
+          {paymentError && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-6 mb-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="ml-3 flex-1">
+                  <h3 className="text-lg font-semibold text-red-800 mb-2">Payment Failed</h3>
+                  <p className="text-red-700 mb-4">{paymentError}</p>
+                  <div className="flex flex-wrap gap-3">
+                    {paymentError.includes('reused') || paymentError.includes('re-added') ? (
+                      <button
+                        onClick={() => {
+                          setPaymentError(null);
+                          navigate('/profile');
+                        }}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                      >
+                        Go to Profile to Manage Cards
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            setPaymentError(null);
+                            setUseNewCard(true);
+                            setSelectedCard(null);
+                          }}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                        >
+                          Try Another Card
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPaymentError(null);
+                            setPaymentMethod('cash');
+                          }}
+                          className="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium"
+                        >
+                          Pay with Cash Instead
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setPaymentError(null)}
+                  className="flex-shrink-0 ml-3 text-red-500 hover:text-red-700"
+                >
+                  <Cross className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="bg-blue-600 text-white p-6">
             <div className="flex items-center justify-between">
@@ -626,16 +715,19 @@ const AddCardForm = ({
 const StripePaymentForm = ({
   payment,
   onSuccess,
+  onError,
   onCancel,
 }: {
   payment: Payment;
   onSuccess: () => void;
+  onError: (error: string) => void;
   onCancel: () => void;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPaymentIntent();
@@ -662,6 +754,7 @@ const StripePaymentForm = ({
     }
 
     setProcessing(true);
+    setError(null);
 
     try {
       const cardElement = elements.getElement(CardElement);
@@ -677,7 +770,26 @@ const StripePaymentForm = ({
       });
 
       if (error) {
-        toast.error(error.message || 'Payment failed');
+        let errorMessage = error.message || 'Payment failed';
+        
+        // Categorize Stripe errors
+        if (error.code === 'card_declined') {
+          errorMessage = 'Your card was declined. Please check your card details or try another card.';
+        } else if (error.code === 'insufficient_funds') {
+          errorMessage = 'Insufficient funds. Please use another payment method.';
+        } else if (error.code === 'expired_card') {
+          errorMessage = 'Your card has expired. Please use another card.';
+        } else if (error.code === 'incorrect_cvc') {
+          errorMessage = 'Incorrect CVC code. Please check and try again.';
+        } else if (error.code === 'processing_error') {
+          errorMessage = 'An error occurred while processing your card. Please try again.';
+        } else if (error.code === 'incorrect_number') {
+          errorMessage = 'Incorrect card number. Please check and try again.';
+        }
+        
+        setError(errorMessage);
+        toast.error(errorMessage);
+        onError(errorMessage);
       } else if (paymentIntent.status === 'succeeded') {
         // Confirm payment with backend
         await apiClient.post(
@@ -685,10 +797,18 @@ const StripePaymentForm = ({
           { paymentIntentId: paymentIntent.id }
         );
         onSuccess();
+      } else {
+        const statusError = 'Payment requires additional authentication or action.';
+        setError(statusError);
+        toast.error(statusError);
+        onError(statusError);
       }
     } catch (error: any) {
       console.error('Error processing payment:', error);
-      toast.error('Payment failed');
+      const errorMessage = error.response?.data?.message || error.message || 'Payment processing failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      onError(errorMessage);
     } finally {
       setProcessing(false);
     }
@@ -707,6 +827,17 @@ const StripePaymentForm = ({
             </span>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="mb-6">

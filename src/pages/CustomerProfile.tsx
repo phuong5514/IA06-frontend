@@ -916,8 +916,10 @@ function AddCardForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel:
       onSuccess();
     } catch (err: any) {
       console.error('Error adding card:', err);
-      setError(err.message || 'Failed to add payment method');
-      toast.error(err.message || 'Failed to add payment method');
+      console.error('Response data:', err.response?.data);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to add payment method';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setProcessing(false);
     }
