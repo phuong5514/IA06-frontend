@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { apiClient } from '../config/api';
 import { useTableSession } from '../context/TableSessionContext';
+import { useAuth } from '../context/AuthContext';
+import { useQuery } from '@tanstack/react-query';
 import QRScannerModal from '../components/QRScannerModal';
 import menuBackground from '../assets/menu_background.png';
 
@@ -26,6 +28,8 @@ interface MenuItem {
   chef_recommendation?: boolean;
 }
 
+type ViewSection = 'preferences' | 'past-orders' | 'explore';
+
 export default function MenuCustomer() {
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -37,6 +41,56 @@ export default function MenuCustomer() {
   const navigate = useNavigate();
   const { addItem, setTableId } = useCart();
   const { session, isSessionActive } = useTableSession();
+  const { user } = useAuth();
+  
+  // Set default section based on user login status
+  const [activeSection, setActiveSection] = useState<ViewSection>(user ? 'preferences' : 'explore');
+
+  // Update active section when user login status changes
+  useEffect(() => {
+    if (!user) {
+      setActiveSection('explore');
+    }
+  }, [user]);
+
+  // Fetch user preferences
+  const { data: preferencesData } = useQuery({
+    queryKey: ['user', 'preferences'],
+    queryFn: async () => {
+      const response = await apiClient.get('/user/preferences');
+      return response.data;
+    },
+    enabled: !!user, // Only fetch if user is logged in
+  });
+
+  // Fetch user order history
+  const { data: ordersData } = useQuery({
+    queryKey: ['user', 'orders'],
+    queryFn: async () => {
+      const response = await apiClient.get('/user/orders');
+      return response.data;
+    },
+    enabled: !!user, // Only fetch if user is logged in
+  });
+
+  // Helper functions to check item status
+  const isPreferenceMatch = (item: MenuItem) => {
+    const userTags = preferencesData?.preferences?.dietary_tags || [];
+    return userTags.length > 0 && item.dietary_tags?.some(tag => userTags.includes(tag));
+  };
+
+  const isPastOrdered = (item: MenuItem) => {
+    const orders = ordersData?.orders || [];
+    const orderedItemIds = new Set<number>();
+    orders.forEach((order: any) => {
+      order.items?.forEach((orderItem: any) => {
+        if (orderItem.menu_item_id) {
+          orderedItemIds.add(orderItem.menu_item_id);
+        }
+      });
+    });
+    return orderedItemIds.has(item.id);
+  };
 
   const handleQuickAdd = (item: MenuItem) => {
     addItem({
@@ -106,7 +160,52 @@ export default function MenuCustomer() {
     return filtered;
   };
 
-  const filteredItems = getFilteredItems();
+  // Get items matching user preferences
+  const getPreferenceMatchedItems = () => {
+    const userTags = preferencesData?.preferences?.dietary_tags || [];
+    if (userTags.length === 0) return [];
+
+    return getFilteredItems().filter(item => {
+      // Check if item has at least one matching dietary tag
+      return item.dietary_tags?.some(tag => userTags.includes(tag)) || false;
+    });
+  };
+
+  // Get past ordered items
+  const getPastOrderedItems = () => {
+    const orders = ordersData?.orders || [];
+    if (orders.length === 0) return [];
+
+    // Get unique menu item IDs from all orders
+    const orderedItemIds = new Set<number>();
+    orders.forEach((order: any) => {
+      order.items?.forEach((item: any) => {
+        if (item.menu_item_id) {
+          orderedItemIds.add(item.menu_item_id);
+        }
+      });
+    });
+
+    // Filter menu items that have been ordered before
+    return getFilteredItems().filter(item => orderedItemIds.has(item.id));
+  };
+
+  // Determine which items to display based on active section
+  const getDisplayItems = () => {
+    switch (activeSection) {
+      case 'preferences':
+        return getPreferenceMatchedItems();
+      case 'past-orders':
+        return getPastOrderedItems();
+      case 'explore':
+      default:
+        return getFilteredItems();
+    }
+  };
+
+  const displayItems = getDisplayItems();
+  const preferenceMatchCount = getPreferenceMatchedItems().length;
+  const pastOrdersCount = getPastOrderedItems().length;
 
   if (loading) {
     return (
@@ -144,6 +243,19 @@ export default function MenuCustomer() {
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold text-white drop-shadow-lg">Our Menu</h1>
             <div className="flex items-center gap-3">
+              {/* Profile Button - Only show if logged in */}
+              {user && (
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="bg-purple-600/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg hover:bg-purple-700/90 transition-colors border border-white/20 flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span className="font-medium">Profile</span>
+                </button>
+              )}
+              
               {/* Table Session Indicator */}
               {isSessionActive && session && (
                 <div className="bg-green-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg border border-white/20 flex items-center gap-2">
@@ -181,6 +293,97 @@ export default function MenuCustomer() {
 
           {/* Frosted Glass Container */}
           <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-6 border border-white/20">
+        
+        {/* Section Tabs - Only show if user is logged in */}
+        {user && (
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-4 mb-6">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setActiveSection('preferences')}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+                  activeSection === 'preferences'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                <span>For You</span>
+                {preferenceMatchCount > 0 && (
+                  <span className="bg-white/20 px-2 py-0.5 rounded-full text-sm">
+                    {preferenceMatchCount}
+                  </span>
+                )}
+              </button>
+              
+              <button
+                onClick={() => setActiveSection('past-orders')}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+                  activeSection === 'past-orders'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Order Again</span>
+                {pastOrdersCount > 0 && (
+                  <span className="bg-white/20 px-2 py-0.5 rounded-full text-sm">
+                    {pastOrdersCount}
+                  </span>
+                )}
+              </button>
+              
+              <button
+                onClick={() => setActiveSection('explore')}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+                  activeSection === 'explore'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span>Explore All</span>
+              </button>
+            </div>
+
+            {/* Section Description */}
+            <div className="mt-4 text-sm text-gray-600">
+              {activeSection === 'preferences' && (
+                <p className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  Items matching your dietary preferences
+                  {preferenceMatchCount === 0 && preferencesData?.preferences?.dietary_tags?.length === 0 && (
+                    <span className="text-orange-600 ml-1">(Set your preferences in profile to see personalized recommendations)</span>
+                  )}
+                </p>
+              )}
+              {activeSection === 'past-orders' && (
+                <p className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  Items you've ordered before - reorder your favorites!
+                </p>
+              )}
+              {activeSection === 'explore' && (
+                <p className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  Browse our complete menu
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Search and Filter */}
         <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -263,8 +466,29 @@ export default function MenuCustomer() {
 
         {/* Menu Items Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map(item => (
-            <div key={item.id} className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl overflow-hidden border border-white/30">
+          {displayItems.map(item => (
+            <div key={item.id} className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl overflow-hidden border border-white/30 relative">
+              {/* Badges for preference match and past orders */}
+              {user && (
+                <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                  {isPreferenceMatch(item) && (
+                    <span className="px-2 py-1 bg-indigo-600 text-white text-xs rounded-full shadow-md flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                      </svg>
+                      For You
+                    </span>
+                  )}
+                  {isPastOrdered(item) && (
+                    <span className="px-2 py-1 bg-green-600 text-white text-xs rounded-full shadow-md flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Ordered Before
+                    </span>
+                  )}
+                </div>
+              )}
               {item.image_url && (
                 <img
                   src={item.image_url}
@@ -326,9 +550,48 @@ export default function MenuCustomer() {
           ))}
         </div>
 
-        {filteredItems.length === 0 && (
-          <div className="text-center text-white bg-white/10 backdrop-blur-sm px-6 py-8 rounded-lg">
-            No menu items found matching your criteria.
+        {displayItems.length === 0 && (
+          <div className="col-span-full text-center text-white bg-white/10 backdrop-blur-sm px-6 py-8 rounded-lg">
+            {activeSection === 'preferences' && preferencesData?.preferences?.dietary_tags?.length === 0 ? (
+              <div className="space-y-3">
+                <svg className="w-16 h-16 mx-auto text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                <p className="text-lg font-medium">Set your food preferences to get personalized recommendations!</p>
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors inline-flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Go to Profile Settings
+                </button>
+              </div>
+            ) : activeSection === 'past-orders' && ordersData?.orders?.length === 0 ? (
+              <div className="space-y-3">
+                <svg className="w-16 h-16 mx-auto text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-lg font-medium">You haven't placed any orders yet!</p>
+                <p className="text-white/80">Start exploring our menu and place your first order.</p>
+                <button
+                  onClick={() => setActiveSection('explore')}
+                  className="mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  Explore Menu
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <svg className="w-16 h-16 mx-auto text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-lg font-medium">No items found matching your criteria.</p>
+                <p className="text-white/80">Try adjusting your filters or search query.</p>
+              </div>
+            )}
           </div>
         )}
           </div>
