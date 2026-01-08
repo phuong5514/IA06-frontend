@@ -68,6 +68,14 @@ export default function CustomerProfile() {
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
   
+  // Change password states
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string>('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  
   // Order history pagination, search, and filter states
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
@@ -307,6 +315,57 @@ export default function CustomerProfile() {
     setProfileImagePreview(profileData?.user?.profile_image_url || null);
   };
 
+  const handleChangePassword = async () => {
+    setPasswordError('');
+
+    // Validate inputs
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      setPasswordError('All fields are required');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters');
+      return;
+    }
+
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(newPassword)) {
+      setPasswordError('Password must contain uppercase, lowercase, number, and special character');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      const response = await apiClient.post('/user/change-password', {
+        currentPassword,
+        newPassword,
+      });
+
+      if (response.data.success) {
+        toast.success('Password changed successfully!');
+        setShowChangePassword(false);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+      } else {
+        setPasswordError(response.data.message || 'Failed to change password');
+        toast.error(response.data.message || 'Failed to change password');
+      }
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to change password';
+      setPasswordError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'profile':
@@ -428,6 +487,99 @@ export default function CustomerProfile() {
                     : 'N/A'}
                 </span>
               </div>
+            </div>
+
+            {/* Change Password Section */}
+            <div className="mt-6 border-t pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Security</h3>
+                {!showChangePassword && (
+                  <button
+                    onClick={() => setShowChangePassword(true)}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+                  >
+                    Change Password
+                  </button>
+                )}
+              </div>
+
+              {showChangePassword && (
+                <div className="bg-gray-50 rounded-lg p-6 space-y-4">
+                  <div>
+                    <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                      Current Password
+                    </label>
+                    <input
+                      type="password"
+                      id="currentPassword"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                      placeholder="Enter current password"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      id="newPassword"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                      placeholder="Enter new password"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Must be at least 8 characters with uppercase, lowercase, number, and special character
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="confirmNewPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      id="confirmNewPassword"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                      placeholder="Confirm new password"
+                    />
+                  </div>
+
+                  {passwordError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                      {passwordError}
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={handleChangePassword}
+                      disabled={changingPassword}
+                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {changingPassword ? 'Changing...' : 'Update Password'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowChangePassword(false);
+                        setCurrentPassword('');
+                        setNewPassword('');
+                        setConfirmNewPassword('');
+                        setPasswordError('');
+                      }}
+                      disabled={changingPassword}
+                      className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
