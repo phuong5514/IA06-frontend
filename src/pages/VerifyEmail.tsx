@@ -22,14 +22,14 @@ export default function VerifyEmail() {
 
   const verifyEmail = async (token: string) => {
     try {
-      const response = await api.post('/auth/verify-email', { token });
+      const response = await api.post('/user/verify-email', { token });
       setStatus('success');
       setMessage(response.data.message || 'Email verified successfully!');
       
-      // Redirect to login after 3 seconds
+      // Redirect to home after 2 seconds where user can login
       setTimeout(() => {
-        navigate('/login');
-      }, 3000);
+        navigate('/?login=true');
+      }, 2000);
     } catch (error: any) {
       setStatus('error');
       setMessage(
@@ -65,10 +65,10 @@ export default function VerifyEmail() {
               </h2>
               <p className="mt-2 text-sm text-gray-600">{message}</p>
               <p className="mt-4 text-sm text-gray-500">
-                Redirecting to login...
+                Redirecting to home...
               </p>
               <Link
-                to="/login"
+                to="/?login=true"
                 className="mt-4 inline-block text-indigo-600 hover:text-indigo-500 font-medium"
               >
                 Click here if not redirected
@@ -92,10 +92,10 @@ export default function VerifyEmail() {
                 </Link>
                 <br />
                 <Link
-                  to="/login"
+                  to="/"
                   className="inline-block text-gray-600 hover:text-gray-500"
                 >
-                  Back to login
+                  Back to home
                 </Link>
               </div>
             </>

@@ -16,6 +16,7 @@ import Dashboard from './pages/Dashboard';
 import backgroundImage from './assets/background.png';
 import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
+import ResendVerification from './pages/ResendVerification';
 import RequestPasswordReset from './pages/RequestPasswordReset';
 import ResetPassword from './pages/ResetPassword';
 import QRLanding from './pages/QRLanding';
@@ -109,6 +110,7 @@ function App() {
             />
             <Route path="/register" element={<Register />} />
             <Route path="/verify" element={<VerifyEmail />} />
+            <Route path="/resend-verification" element={<ResendVerification />} />
             <Route path="/request-password-reset" element={<RequestPasswordReset />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/qr/:qr_token" element={<QRLanding />} />
