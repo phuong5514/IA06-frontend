@@ -3,6 +3,8 @@ import { apiClient } from '../config/api';
 import { useNavigate, Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import StarRating from '../components/StarRating';
+import ReviewManagementModal from '../components/ReviewManagementModal';
 
 interface MenuCategory {
   id: number;
@@ -22,6 +24,8 @@ interface MenuItem {
   display_order: number;
   preparation_time?: number;
   chef_recommendation?: boolean;
+  average_rating?: number;
+  review_count?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -47,6 +51,8 @@ export default function MenuItemsManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [totalItems, setTotalItems] = useState(0);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [selectedItemForReview, setSelectedItemForReview] = useState<MenuItem | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -329,6 +335,22 @@ export default function MenuItemsManagement() {
                       ${parseFloat(item.price).toFixed(2)}
                     </p>
 
+                    {/* Rating */}
+                    {item.review_count && item.review_count > 0 ? (
+                      <div className="mb-3">
+                        <div className="flex items-center space-x-2">
+                          <StarRating rating={item.average_rating || 0} size="sm" />
+                          <span className="text-sm text-gray-600">
+                            ({item.review_count} {item.review_count === 1 ? 'review' : 'reviews'})
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mb-3">
+                        <span className="text-sm text-gray-500">No reviews yet</span>
+                      </div>
+                    )}
+
                     {/* Dietary Tags */}
                     {item.dietary_tags && item.dietary_tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mb-3">
@@ -372,28 +394,41 @@ export default function MenuItemsManagement() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => navigate(`/admin/menu-editor?id=${item.id}`)}
-                        className="flex-1 bg-indigo-600 text-white px-3 py-2 rounded hover:bg-indigo-700 transition-colors text-sm"
-                      >
-                        Edit
-                      </button>
-                      <select
-                        value={item.status}
-                        onChange={(e) => handleStatusChange(item.id, e.target.value as 'available' | 'unavailable' | 'sold_out')}
-                        className="flex-1 px-3 py-2 rounded transition-colors text-sm bg-white border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        <option value="available">Available</option>
-                        <option value="unavailable">Unavailable</option>
-                        <option value="sold_out">Sold Out</option>
-                      </select>
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        className="px-3 py-2 bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors text-sm"
-                      >
-                        Delete
-                      </button>
+                    <div className="space-y-2">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => navigate(`/admin/menu-editor?id=${item.id}`)}
+                          className="flex-1 bg-indigo-600 text-white px-3 py-2 rounded hover:bg-indigo-700 transition-colors text-sm"
+                        >
+                          Edit
+                        </button>
+                        <select
+                          value={item.status}
+                          onChange={(e) => handleStatusChange(item.id, e.target.value as 'available' | 'unavailable' | 'sold_out')}
+                          className="flex-1 px-3 py-2 rounded transition-colors text-sm bg-white border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="available">Available</option>
+                          <option value="unavailable">Unavailable</option>
+                          <option value="sold_out">Sold Out</option>
+                        </select>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => {
+                            setSelectedItemForReview(item);
+                            setReviewModalOpen(true);
+                          }}
+                          className="flex-1 px-3 py-2 bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors text-sm"
+                        >
+                          Reviews
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          className="flex-1 px-3 py-2 bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors text-sm"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -506,6 +541,20 @@ export default function MenuItemsManagement() {
               </div>
             </div>
           </>
+        )}
+
+        {/* Review Management Modal */}
+        {selectedItemForReview && (
+          <ReviewManagementModal
+            menuItemId={selectedItemForReview.id}
+            menuItemName={selectedItemForReview.name}
+            isOpen={reviewModalOpen}
+            onClose={() => {
+              setReviewModalOpen(false);
+              setSelectedItemForReview(null);
+              fetchData(); // Refresh data to get updated review counts
+            }}
+          />
         )}
       </div>
     </DashboardLayout>

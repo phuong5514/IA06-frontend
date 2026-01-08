@@ -4,6 +4,9 @@ import { apiClient } from '../config/api';
 import { API_ENDPOINTS } from '../config/api';
 import { useCart } from '../context/CartContext';
 import type { CartModifier } from '../context/CartContext';
+import StarRating from '../components/StarRating';
+import ReviewList from '../components/ReviewList';
+import ReviewForm from '../components/ReviewForm';
 
 interface MenuItem {
   id: number;
@@ -17,6 +20,8 @@ interface MenuItem {
   display_order: number;
   preparation_time?: number;
   chef_recommendation?: boolean;
+  average_rating?: number;
+  review_count?: number;
   images?: Array<{
     id: number;
     original_url: string;
@@ -53,6 +58,7 @@ export default function MenuItemDetail() {
   const [selectedModifiers, setSelectedModifiers] = useState<SelectedModifiers>({});
   const [quantity, setQuantity] = useState(1);
   const [specialInstructions, setSpecialInstructions] = useState('');
+  const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0);
   
   // Get edit mode from URL params
   const [searchParams] = useState(() => new URLSearchParams(window.location.search));
@@ -381,6 +387,50 @@ export default function MenuItemDetail() {
                   ? (isEditMode ? 'Update Order' : 'Add to Order')
                   : 'Currently Unavailable'}
               </button>
+            </div>
+          </div>
+
+          {/* Reviews Section */}
+          <div className="mt-8 border-t pt-8">
+            <h2 className="text-2xl font-bold mb-4">Customer Reviews</h2>
+            
+            {/* Average Rating */}
+            {item.review_count && item.review_count > 0 ? (
+              <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                <div className="flex items-center justify-center flex-col">
+                  <div className="text-5xl font-bold text-gray-900 mb-2">
+                    {item.average_rating?.toFixed(1) || '0.0'}
+                  </div>
+                  <StarRating rating={item.average_rating || 0} size="lg" />
+                  <div className="text-gray-600 mt-2">
+                    Based on {item.review_count} {item.review_count === 1 ? 'review' : 'reviews'}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 rounded-lg p-6 mb-6 text-center">
+                <p className="text-gray-600">No reviews yet</p>
+              </div>
+            )}
+
+            {/* Review Form */}
+            <div className="mb-8">
+              <ReviewForm 
+                menuItemId={item.id} 
+                onSubmitSuccess={() => {
+                  setReviewRefreshTrigger(prev => prev + 1);
+                  fetchItem(item.id);
+                }}
+              />
+            </div>
+
+            {/* Review List */}
+            <div>
+              <h3 className="text-xl font-semibold mb-4">All Reviews</h3>
+              <ReviewList 
+                menuItemId={item.id}
+                refreshTrigger={reviewRefreshTrigger}
+              />
             </div>
           </div>
         </div>

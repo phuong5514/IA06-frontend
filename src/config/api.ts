@@ -120,6 +120,10 @@ export const API_ENDPOINTS = {
   LOGOUT: '/user/logout',
   ME: '/user/me',
   MENU_ITEM: (id: number) => `/menu/items/${id}`,
+  REVIEWS: '/reviews',
+  REVIEW_AVERAGE: (menuItemId: number) => `/reviews/average/${menuItemId}`,
+  REVIEW_RESPOND: (reviewId: number) => `/reviews/${reviewId}/respond`,
+  REVIEW_BY_ID: (reviewId: number) => `/reviews/${reviewId}`,
 };
 
 export default API_BASE_URL;

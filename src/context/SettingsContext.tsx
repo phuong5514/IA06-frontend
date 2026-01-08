@@ -45,7 +45,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       
-      // Fetch branding settings
+      // Fetch branding settings (public endpoint)
       const brandingResponse = await apiClient.get('/system-settings/branding');
       setBranding(brandingResponse.data);
       
@@ -53,13 +53,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       document.documentElement.style.setProperty('--primary-color', brandingResponse.data.primaryColor);
       document.documentElement.style.setProperty('--secondary-color', brandingResponse.data.secondaryColor);
       
-      // Fetch workflow settings
+      // Fetch workflow settings (requires authentication - skip if not authenticated)
       try {
         const workflowResponse = await apiClient.get('/system-settings/workflow/config');
         setWorkflow(workflowResponse.data);
-      } catch (err) {
-        console.error('Failed to fetch workflow settings:', err);
-        setWorkflow(defaultWorkflow);
+      } catch (err: any) {
+        // Silently use defaults if not authenticated or if fetch fails
+        if (err.response?.status === 403 || err.response?.status === 401) {
+          // User not authenticated, use defaults
+          setWorkflow(defaultWorkflow);
+        } else {
+          console.error('Failed to fetch workflow settings:', err);
+          setWorkflow(defaultWorkflow);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch branding settings:', error);

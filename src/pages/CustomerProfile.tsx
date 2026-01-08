@@ -60,6 +60,14 @@ export default function CustomerProfile() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showAddCard, setShowAddCard] = useState(false);
   
+  // Profile editing states
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editedName, setEditedName] = useState('');
+  const [editedPhone, setEditedPhone] = useState('');
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
+  
   // Order history pagination, search, and filter states
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
@@ -68,13 +76,22 @@ export default function CustomerProfile() {
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
   // Fetch user profile
-  const { data: profileData } = useQuery({
+  const { data: profileData, refetch: refetchProfile } = useQuery({
     queryKey: ['user', 'profile'],
     queryFn: async () => {
       const response = await apiClient.get('/user/me');
       return response.data;
     },
   });
+
+  // Initialize edit form when profile data loads
+  useEffect(() => {
+    if (profileData?.user) {
+      setEditedName(profileData.user.name || '');
+      setEditedPhone(profileData.user.phone || '');
+      setProfileImagePreview(profileData.user.profile_image_url || null);
+    }
+  }, [profileData]);
 
   // Fetch ordering history
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
@@ -178,34 +195,231 @@ export default function CustomerProfile() {
     );
   };
 
+  // Profile update mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (updates: { name?: string; phone?: string; profile_image_url?: string }) => {
+      const response = await apiClient.put('/user/profile', updates);
+      return response.data;
+    },
+    onSuccess: async () => {
+      await refetchProfile();
+      setIsEditingProfile(false);
+      toast.success('Profile updated successfully!');
+    },
+    onError: (error) => {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
+    },
+  });
+
+  const handleProfileImageUpload = async (file: File) => {
+    setUploadingProfileImage(true);
+    setUploadProgress('Getting upload URL...');
+
+    try {
+      // Step 1: Get signed upload URL from backend
+      const uploadUrlResponse = await apiClient.post('/user/profile/image/upload-url', {
+        fileName: file.name,
+        contentType: file.type,
+      });
+
+      const { signedUrl, fileName: gcsFileName } = uploadUrlResponse.data;
+      setUploadProgress('Uploading to Google Cloud...');
+
+      // Step 2: Upload file directly to GCS
+      const uploadResponse = await fetch(signedUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload image to cloud storage');
+      }
+
+      setUploadProgress('Confirming upload...');
+
+      // Step 3: Confirm upload and get processed URLs
+      const confirmResponse = await apiClient.post('/user/profile/image/confirm', {
+        gcsFileName,
+      });
+
+      setUploadProgress('Upload complete!');
+      setTimeout(() => setUploadProgress(''), 2000);
+
+      // Update preview with the new image URL
+      setProfileImagePreview(confirmResponse.data.url);
+      
+      // Refresh profile data
+      await refetchProfile();
+      toast.success('Profile picture updated successfully!');
+
+    } catch (error: any) {
+      console.error('Error uploading profile image:', error);
+      toast.error(error.response?.data?.message || 'Failed to upload profile image');
+      setUploadProgress('');
+    } finally {
+      setUploadingProfileImage(false);
+    }
+  };
+
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+      if (!acceptedTypes.includes(file.type)) {
+        toast.error('Please select a valid image file (JPG, PNG, or WebP)');
+        return;
+      }
+
+      // Validate file size (5MB max)
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        setProfileImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Start the upload process
+      handleProfileImageUpload(file);
+    }
+  };
+
+  const handleSaveProfile = () => {
+    updateProfileMutation.mutate({
+      name: editedName || undefined,
+      phone: editedPhone || undefined,
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingProfile(false);
+    setEditedName(profileData?.user?.name || '');
+    setEditedPhone(profileData?.user?.phone || '');
+    setProfileImagePreview(profileData?.user?.profile_image_url || null);
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'profile':
         return (
           <div className="space-y-6">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
-                {user?.email?.charAt(0).toUpperCase()}
+            <div className="flex items-center gap-6 mb-6">
+              {/* Profile Picture */}
+              <div className="relative">
+                {profileImagePreview ? (
+                  <img
+                    src={profileImagePreview}
+                    alt="Profile"
+                    className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold border-4 border-white shadow-lg">
+                    {user?.email?.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <label
+                  htmlFor="profile-image-input"
+                  className="absolute bottom-0 right-0 bg-indigo-600 text-white rounded-full p-2 cursor-pointer hover:bg-indigo-700 transition-colors shadow-lg"
+                  title="Change profile picture"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </label>
+                <input
+                  id="profile-image-input"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleProfileImageChange}
+                  disabled={uploadingProfileImage}
+                  className="hidden"
+                />
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">
-                  {profileData?.user?.name || 'Guest User'}
-                </h2>
-                <p className="text-gray-600">{user?.email}</p>
+
+              {/* Profile Info */}
+              <div className="flex-1">
+                {isEditingProfile ? (
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={editedName}
+                      onChange={(e) => setEditedName(e.target.value)}
+                      placeholder="Your name"
+                      className="w-full text-2xl font-bold text-gray-800 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none bg-transparent"
+                    />
+                    <input
+                      type="tel"
+                      value={editedPhone}
+                      onChange={(e) => setEditedPhone(e.target.value)}
+                      placeholder="Phone number"
+                      className="w-full text-gray-600 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none bg-transparent"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="text-2xl font-bold text-gray-800">
+                      {profileData?.user?.name || 'Guest User'}
+                    </h2>
+                    <p className="text-gray-600">{user?.email}</p>
+                    {profileData?.user?.phone && (
+                      <p className="text-gray-500 text-sm mt-1">{profileData.user.phone}</p>
+                    )}
+                  </>
+                )}
               </div>
+
+              {/* Edit Button */}
+              {!isEditingProfile ? (
+                <button
+                  onClick={() => setIsEditingProfile(true)}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={updateProfileMutation.isPending}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                  >
+                    {updateProfileMutation.isPending ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={updateProfileMutation.isPending}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
+
+            {uploadProgress && (
+              <div className="bg-indigo-50 border border-indigo-200 text-indigo-700 px-4 py-3 rounded-lg">
+                {uploadProgress}
+              </div>
+            )}
 
             <div className="bg-gray-50 rounded-lg p-6 space-y-4">
               <div>
                 <span className="font-medium text-gray-700">Email:</span>
                 <span className="ml-2 text-gray-900">{user?.email}</span>
               </div>
-              {profileData?.user?.phone && (
-                <div>
-                  <span className="font-medium text-gray-700">Phone:</span>
-                  <span className="ml-2 text-gray-900">{profileData.user.phone}</span>
-                </div>
-              )}
               <div>
                 <span className="font-medium text-gray-700">Member Since:</span>
                 <span className="ml-2 text-gray-900">
