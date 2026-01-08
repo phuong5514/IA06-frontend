@@ -63,7 +63,7 @@ export default function ResetPassword() {
       setSuccess(true);
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        navigate('/login');
+        navigate('/?login');
       }, 3000);
     } catch (error: any) {
       setErrors({
