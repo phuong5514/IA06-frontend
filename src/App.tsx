@@ -7,6 +7,7 @@ import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { TableSessionProvider } from './context/TableSessionContext';
 import { WebSocketProvider } from './context/WebSocketContext';
+import { SettingsProvider } from './context/SettingsContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Header from './components/Header';
 import AuthModal from './components/AuthModal';
@@ -57,10 +58,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AuthProvider>
-          <WebSocketProvider>
-            <TableSessionProvider>
-              <CartProvider>
+        <SettingsProvider>
+          <AuthProvider>
+            <WebSocketProvider>
+              <TableSessionProvider>
+                <CartProvider>
                 <Toaster
                   position="top-right"
                   toastOptions={{
@@ -261,6 +263,7 @@ function App() {
             </TableSessionProvider>
           </WebSocketProvider>
         </AuthProvider>
+      </SettingsProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );

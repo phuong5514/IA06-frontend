@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useSettings } from '../context/SettingsContext';
 import logo from '../assets/logo.png';
 
 
@@ -16,6 +17,7 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, logout, isAuthenticated } = useAuth();
   const { getTotalItems } = useCart();
+  const { branding } = useSettings();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -78,16 +80,21 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center gap-2">
             <img
-              src={logo}
-              alt="Smart Restaurant Logo"
-              className="h-10 w-10 cursor-pointer"
+              src={branding.logoUrl || logo}
+              alt={`${branding.restaurantName} Logo`}
+              className="h-10 w-10 cursor-pointer object-contain"
               onClick={goToHome}
+              onError={(e) => {
+                // Fallback to default logo if custom logo fails to load
+                e.currentTarget.src = logo;
+              }}
             />
             <h1
               onClick={goToHome}
-              className="text-2xl font-bold text-indigo-600 cursor-pointer"
+              className="text-2xl font-bold cursor-pointer"
+              style={{ color: branding.primaryColor }}
             >
-              Smart Restaurant
+              {branding.restaurantName}
             </h1>
           </div>
 
@@ -95,7 +102,10 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
           <nav className="hidden md:flex items-center space-x-4">
             <button
               onClick={goToMenu}
-              className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+              className="px-4 py-2 text-gray-700 hover:text-primary font-medium transition"
+              style={{ '--hover-color': branding.primaryColor } as React.CSSProperties}
+              onMouseEnter={(e) => e.currentTarget.style.color = branding.primaryColor}
+              onMouseLeave={(e) => e.currentTarget.style.color = ''}
             >
               Menu
             </button>
@@ -132,13 +142,18 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
               <>
                 <button
                   onClick={onOpenSignIn}
-                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+                  className="px-4 py-2 text-gray-700 font-medium transition"
+                  onMouseEnter={(e) => e.currentTarget.style.color = branding.primaryColor}
+                  onMouseLeave={(e) => e.currentTarget.style.color = ''}
                 >
                   Sign In
                 </button>
                 <button
                   onClick={onOpenSignUp}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition"
+                  className="px-4 py-2 text-white rounded-lg font-medium transition"
+                  style={{ backgroundColor: branding.primaryColor }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                 >
                   Sign Up
                 </button>

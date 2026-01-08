@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiClient } from '../config/api';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
+import { useSettings } from '../context/SettingsContext';
 
 interface Table {
   id: number;
@@ -26,6 +27,7 @@ interface TableForm {
 export default function TableEditor() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { workflow } = useSettings();
   const tableId = searchParams.get('id');
   const isEditing = !!tableId;
 
@@ -36,7 +38,7 @@ export default function TableEditor() {
 
   const [form, setForm] = useState<TableForm>({
     table_number: '',
-    capacity: 4,
+    capacity: workflow.defaultSeatsPerTable || 4,
     location: '',
     description: '',
   });
@@ -199,10 +201,10 @@ export default function TableEditor() {
                   min="1"
                   max="20"
                   value={form.capacity}
-                  onChange={(e) => handleInputChange('capacity', parseInt(e.target.value) || 4)}
+                  onChange={(e) => handleInputChange('capacity', parseInt(e.target.value) || workflow.defaultSeatsPerTable)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-                <p className="text-sm text-gray-500 mt-1">Number of seats (1-20)</p>
+                <p className="text-sm text-gray-500 mt-1">Number of seats (1-20) • Default: {workflow.defaultSeatsPerTable}</p>
               </div>
 
               <div>

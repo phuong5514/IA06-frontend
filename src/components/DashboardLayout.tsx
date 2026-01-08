@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import Navigation from './Navigation';
+import logo from '../assets/logo.png';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -10,6 +12,7 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { user, logout } = useAuth();
+  const { branding } = useSettings();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -35,7 +38,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h1 className="text-xl font-bold text-indigo-600">Smart Restaurant</h1>
+            {branding.logoUrl && (
+              <img
+                src={branding.logoUrl}
+                alt={`${branding.restaurantName} Logo`}
+                className="h-8 w-8 mr-2 object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = logo;
+                }}
+              />
+            )}
+            <h1 className="text-xl font-bold" style={{ color: branding.primaryColor }}>
+              {branding.restaurantName}
+            </h1>
           </div>
           
           <div className="flex items-center space-x-4">
