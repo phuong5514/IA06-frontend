@@ -143,6 +143,12 @@ export default function Dashboard() {
                   >
                     🪑 Manage Tables
                   </button>
+                  <button
+                    onClick={() => navigate('/admin/analytics')}
+                    className="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  >
+                    📈 Revenue & Analytics
+                  </button>
                 </div>
               </div>
             )}

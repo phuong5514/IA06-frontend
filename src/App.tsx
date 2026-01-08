@@ -36,6 +36,7 @@ import WaiterOrders from './pages/WaiterOrders';
 import KitchenDisplay from './pages/KitchenDisplay';
 import CustomerBilling from './pages/CustomerBilling';
 import WaiterBillManagement from './pages/WaiterBillManagement';
+import RevenueAnalytics from './pages/RevenueAnalytics';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -173,6 +174,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
                   <TableEditor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/analytics"
+              element={
+                <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
+                  <RevenueAnalytics />
                 </ProtectedRoute>
               }
             />
