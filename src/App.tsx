@@ -38,6 +38,8 @@ import KitchenDisplay from './pages/KitchenDisplay';
 import CustomerBilling from './pages/CustomerBilling';
 import WaiterBillManagement from './pages/WaiterBillManagement';
 import RevenueAnalytics from './pages/RevenueAnalytics';
+import GoogleAuthSuccess from './pages/GoogleAuthSuccess';
+import GoogleAuthError from './pages/GoogleAuthError';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -113,6 +115,8 @@ function App() {
             <Route path="/resend-verification" element={<ResendVerification />} />
             <Route path="/request-password-reset" element={<RequestPasswordReset />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
+            <Route path="/auth/google/error" element={<GoogleAuthError />} />
             <Route path="/qr/:qr_token" element={<QRLanding />} />
             <Route path="/qr" element={<QRLanding />} />
             <Route
