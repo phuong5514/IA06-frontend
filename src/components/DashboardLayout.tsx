@@ -38,16 +38,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            {branding.logoUrl && (
-              <img
-                src={branding.logoUrl}
-                alt={`${branding.restaurantName} Logo`}
-                className="h-8 w-8 mr-2 object-contain"
-                onError={(e) => {
-                  e.currentTarget.src = logo;
-                }}
-              />
-            )}
+            <img
+              src={branding.logoUrl || logo}
+              alt={`${branding.restaurantName} Logo`}
+              className="h-8 w-8 mr-2 object-contain"
+              onError={(e) => {
+                e.currentTarget.src = logo;
+              }}
+            />
             <h1 className="text-xl font-bold" style={{ color: branding.primaryColor }}>
               {branding.restaurantName}
             </h1>

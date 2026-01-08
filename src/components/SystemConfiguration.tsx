@@ -2,13 +2,19 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 
 export default function SystemConfiguration() {
   const { user } = useAuth();
+  const { refreshSettings } = useSettings();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'branding' | 'workflow' | 'general'>('branding');
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
 
   // Local state for form values
   const [brandingSettings, setBrandingSettings] = useState({
@@ -58,6 +64,104 @@ export default function SystemConfiguration() {
       });
     }
   }, [settings]);
+
+  // Set logo preview when settings are loaded
+  useEffect(() => {
+    if (brandingSettings.restaurant_logo_url) {
+      setLogoPreview(brandingSettings.restaurant_logo_url);
+    }
+  }, [brandingSettings.restaurant_logo_url]);
+
+  const handleLogoUpload = async (file: File) => {
+    setUploadingLogo(true);
+    setUploadProgress('Getting upload URL...');
+
+    try {
+      // Step 1: Get signed upload URL from backend
+      const uploadUrlResponse = await apiClient.post('/system-settings/logo/upload-url', {
+        fileName: file.name,
+        contentType: file.type,
+      });
+
+      const { signedUrl, fileName: gcsFileName } = uploadUrlResponse.data;
+      setUploadProgress('Uploading to Google Cloud...');
+
+      // Step 2: Upload file directly to GCS
+      const uploadResponse = await fetch(signedUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload logo to cloud storage');
+      }
+
+      setUploadProgress('Confirming upload...');
+
+      // Step 3: Confirm upload and get processed URLs
+      const confirmResponse = await apiClient.post('/system-settings/logo/confirm', {
+        gcsFileName,
+      });
+
+      setUploadProgress('Upload complete!');
+      setTimeout(() => setUploadProgress(''), 2000);
+
+      // Update the form with the new logo URL
+      setBrandingSettings(prev => ({
+        ...prev,
+        restaurant_logo_url: confirmResponse.data.url,
+      }));
+      setLogoPreview(confirmResponse.data.url);
+      
+      // Invalidate queries to refresh the logo
+      queryClient.invalidateQueries({ queryKey: ['system-settings-all'] });
+      queryClient.invalidateQueries({ queryKey: ['system-settings-branding'] });
+      
+      // Refresh settings context to update all headers immediately
+      await refreshSettings();
+      
+      setSuccessMessage('Logo uploaded successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+
+    } catch (error: any) {
+      console.error('Logo upload error:', error);
+      setUploadProgress('');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+      if (!acceptedTypes.includes(file.type)) {
+        alert('Please select a valid image file (JPG, PNG, or WebP)');
+        return;
+      }
+
+      // Validate file size (5MB max)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        alert('Image size must be less than 5MB');
+        return;
+      }
+
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Start the upload process
+      handleLogoUpload(file);
+    }
+  };
 
   // Bulk update mutation
   const updateSettingsMutation = useMutation({
@@ -267,33 +371,32 @@ export default function SystemConfiguration() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Restaurant Logo URL
+                  Restaurant Logo (JPG, PNG, WebP - Max 5MB)
                 </label>
                 <input
-                  type="text"
-                  value={brandingSettings.restaurant_logo_url}
-                  onChange={(e) =>
-                    setBrandingSettings({ ...brandingSettings, restaurant_logo_url: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="https://example.com/logo.png"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleLogoChange}
+                  disabled={uploadingLogo}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                 />
-                <p className="text-sm text-gray-500 mt-1">
-                  URL to your restaurant logo (leave empty for default)
-                </p>
-                {brandingSettings.restaurant_logo_url && (
-                  <div className="mt-3 p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Logo Preview:</p>
+                {uploadProgress && (
+                  <div className="mt-2 text-sm text-indigo-600">
+                    {uploadProgress}
+                  </div>
+                )}
+                {logoPreview && (
+                  <div className="mt-2">
                     <img
-                      src={brandingSettings.restaurant_logo_url}
-                      alt="Restaurant Logo"
-                      className="h-16 object-contain"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
+                      src={logoPreview}
+                      alt="Restaurant Logo Preview"
+                      className="max-w-full h-48 object-contain rounded-md"
                     />
                   </div>
                 )}
+                <p className="text-sm text-gray-500 mt-1">
+                  Upload a logo for your restaurant (recommended size: 500x500px)
+                </p>
               </div>
 
               <button
