@@ -21,7 +21,18 @@ interface MenuItem {
   display_order: number;
   preparation_time?: number;
   chef_recommendation?: boolean;
+  images?: MenuItemImage[];
 }
+
+interface MenuItemImage {
+  id: number;
+  original_url: string;
+  thumbnail_url: string;
+  display_url: string;
+  is_thumbnail: boolean;
+  display_order: number;
+}
+
 
 interface ModifierGroup {
   id: number;
@@ -81,8 +92,8 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [images, setImages] = useState<MenuItemImage[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
@@ -147,8 +158,9 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
         preparation_time: item.preparation_time,
         chef_recommendation: item.chef_recommendation,
       });
-      if (item.image_url) {
-        setImagePreview(item.image_url);
+      // Load images if they exist
+      if (item.images && item.images.length > 0) {
+        setImages(item.images);
       }
       // Fetch modifier groups for this item
       await fetchModifierGroups();
@@ -213,10 +225,8 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
       setUploadProgress('Upload complete!');
       setTimeout(() => setUploadProgress(''), 2000);
 
-      // Update the form with the new image URL
-      // The backend should have updated the menu item with the display URL
-      // Let's refresh the item data or update the preview
-      setImagePreview(confirmResponse.data.urls.display);
+      // Refresh images list
+      await fetchImages(idToUse);
 
     } catch (error: any) {
       setError(error.response?.data?.message || 'Failed to upload image');
@@ -226,34 +236,85 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
     }
   };
 
+  const fetchImages = async (itemId?: number) => {
+    const idToUse = itemId || currentItemId;
+    if (!idToUse) return;
+
+    try {
+      const response = await apiClient.get(`/menu/items/${idToUse}/images`);
+      setImages(Array.isArray(response.data) ? response.data : []);
+    } catch (error: any) {
+      console.error('Failed to fetch images:', error);
+      setImages([]);
+    }
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Validate all selected files
+    const validFiles: File[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
       // Validate file type
       const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp'];
       if (!acceptedTypes.includes(file.type)) {
-        setError('Please select a valid image file (JPG, PNG, or WebP)');
-        return;
+        setError(`Invalid file type for ${file.name}. Please select JPG, PNG, or WebP`);
+        continue;
       }
 
       // Validate file size (5MB max)
       const maxSize = 5 * 1024 * 1024; // 5MB
       if (file.size > maxSize) {
-        setError('Image size must be less than 5MB');
-        return;
+        setError(`${file.name} is too large. Maximum size is 5MB`);
+        continue;
       }
 
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onload = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      validFiles.push(file);
+    }
 
-      // If we have a current item ID, start the upload process
-      if (currentItemId) {
-        handleImageUpload(file);
-      }
+    if (validFiles.length === 0) return;
+
+    // If we have a current item ID, upload all files
+    if (currentItemId) {
+      validFiles.forEach(file => handleImageUpload(file));
+    } else {
+      // Store files for later upload when item is created
+      setImageFiles(prev => [...prev, ...validFiles]);
+    }
+
+    // Clear the file input
+    e.target.value = '';
+  };
+
+  const handleDeleteImage = async (imageId: number) => {
+    if (!currentItemId) return;
+
+    if (!window.confirm('Are you sure you want to delete this image?')) return;
+
+    try {
+      await apiClient.delete(`/menu/items/${currentItemId}/images/${imageId}`);
+      setImages(prev => prev.filter(img => img.id !== imageId));
+      setSuccess('Image deleted successfully');
+      setTimeout(() => setSuccess(null), 2000);
+    } catch (error: any) {
+      setError(error.response?.data?.message || 'Failed to delete image');
+    }
+  };
+
+  const handleSetThumbnail = async (imageId: number) => {
+    if (!currentItemId) return;
+
+    try {
+      await apiClient.put(`/menu/items/${currentItemId}/images/${imageId}/set-thumbnail`);
+      // Refresh images to update thumbnail status
+      await fetchImages();
+      setSuccess('Thumbnail updated successfully');
+      setTimeout(() => setSuccess(null), 2000);
+    } catch (error: any) {
+      setError(error.response?.data?.message || 'Failed to set thumbnail');
     }
   };
 
@@ -524,9 +585,12 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
         }
       }
 
-      // Upload image if selected
-      if (imageFile && itemIdToUse) {
-        await handleImageUpload(imageFile, itemIdToUse);
+      // Upload images if selected (for new items)
+      if (imageFiles.length > 0 && itemIdToUse) {
+        for (const file of imageFiles) {
+          await handleImageUpload(file, itemIdToUse);
+        }
+        setImageFiles([]);
       }
 
       setSuccess(currentItemId ? 'Menu item updated successfully!' : 'Menu item created successfully!');
@@ -676,13 +740,14 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Image (JPG, PNG, WebP - Max 5MB)
+            Images (JPG, PNG, WebP - Max 5MB each)
           </label>
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp"
             onChange={handleImageChange}
             disabled={uploadingImage}
+            multiple
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
           />
           {uploadProgress && (
@@ -690,13 +755,70 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
               {uploadProgress}
             </div>
           )}
-          {imagePreview && (
-            <div className="mt-2">
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="max-w-full h-48 object-cover rounded-md"
-              />
+          
+          {/* Display existing images */}
+          {images.length > 0 && (
+            <div className="mt-4">
+              <p className="text-sm text-gray-600 mb-2">Current Images (Click image to set as thumbnail)</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {images.map((image) => (
+                  <div
+                    key={image.id}
+                    className={`relative group rounded-lg overflow-hidden border-2 ${
+                      image.is_thumbnail ? 'border-blue-500' : 'border-gray-200'
+                    }`}
+                  >
+                    <img
+                      src={image.display_url}
+                      alt="Menu item"
+                      className="w-full h-32 object-cover cursor-pointer"
+                      onClick={() => handleSetThumbnail(image.id)}
+                    />
+                    {image.is_thumbnail && (
+                      <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                        Thumbnail
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteImage(image.id)}
+                      className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Delete image"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Click on an image to set it as the thumbnail. Hover to delete.
+              </p>
+            </div>
+          )}
+
+          {/* Preview for new files (before item is created) */}
+          {imageFiles.length > 0 && !currentItemId && (
+            <div className="mt-4">
+              <p className="text-sm text-gray-600 mb-2">Ready to upload ({imageFiles.length} file{imageFiles.length > 1 ? 's' : ''})</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {imageFiles.map((file, index) => (
+                  <div key={index} className="relative rounded-lg overflow-hidden border border-gray-200">
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-32 object-cover"
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 truncate">
+                      {file.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                These images will be uploaded when you save the menu item.
+              </p>
             </div>
           )}
         </div>

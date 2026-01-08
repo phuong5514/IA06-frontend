@@ -60,6 +60,7 @@ export default function MenuItemDetail() {
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0);
   const [relatedItems, setRelatedItems] = useState<MenuItem[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   // Get edit mode from URL params
   const [searchParams] = useState(() => new URLSearchParams(window.location.search));
@@ -93,6 +94,22 @@ export default function MenuItemDetail() {
       setSelectedModifiers(modifiers);
     }
   }, [cartItemToEdit, item]);
+
+  const nextImage = () => {
+    if (item?.images && item.images.length > 0) {
+      setCurrentImageIndex((prev) => (prev + 1) % item.images.length);
+    }
+  };
+
+  const previousImage = () => {
+    if (item?.images && item.images.length > 0) {
+      setCurrentImageIndex((prev) => (prev - 1 + item.images.length) % item.images.length);
+    }
+  };
+
+  const goToImage = (index: number) => {
+    setCurrentImageIndex(index);
+  };
 
   const fetchItem = async (itemId: number) => {
     try {
@@ -284,8 +301,68 @@ export default function MenuItemDetail() {
         </button>
 
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          {/* Image */}
-          {item.image_url && (
+          {/* Image Slideshow */}
+          {item.images && item.images.length > 0 ? (
+            <div className="relative h-96 bg-gray-100">
+              <img
+                src={item.images[currentImageIndex].display_url}
+                alt={item.name}
+                className="w-full h-full object-cover"
+              />
+              
+              {/* Navigation Arrows */}
+              {item.images.length > 1 && (
+                <>
+                  <button
+                    onClick={previousImage}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-75 text-white p-2 rounded-full transition-all"
+                    aria-label="Previous image"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-75 text-white p-2 rounded-full transition-all"
+                    aria-label="Next image"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+
+                  {/* Image Counter */}
+                  <div className="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+                    {currentImageIndex + 1} / {item.images.length}
+                  </div>
+
+                  {/* Thumbnail Indicators */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                    {item.images.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => goToImage(index)}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          index === currentImageIndex
+                            ? 'bg-white w-8'
+                            : 'bg-white bg-opacity-50 hover:bg-opacity-75'
+                        }`}
+                        aria-label={`Go to image ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Status Badge */}
+              {item.status !== 'available' && (
+                <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                  {item.status === 'sold_out' ? 'Sold Out' : 'Unavailable'}
+                </div>
+              )}
+            </div>
+          ) : item.image_url ? (
             <div className="relative h-96">
               <img
                 src={item.image_url}
@@ -298,7 +375,7 @@ export default function MenuItemDetail() {
                 </div>
               )}
             </div>
-          )}
+          ) : null}
 
           <div className="p-8">
             {/* Basic Info */}
