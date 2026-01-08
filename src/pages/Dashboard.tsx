@@ -3,10 +3,15 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../config/api';
 import DashboardLayout from '../components/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import SystemStatsBoard from '../components/SystemStatsBoard';
+import AuditLogsViewer from '../components/AuditLogsViewer';
+import SystemConfiguration from '../components/SystemConfiguration';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [activeView, setActiveView] = useState<'overview' | 'audit-logs' | 'system-config'>('overview');
 
   // Example protected data query
   const { data: profileData, isLoading } = useQuery({
@@ -17,26 +22,58 @@ export default function Dashboard() {
     },
   });
 
-  const handleMenuManagement = () => {
-    navigate('/admin/menu-items');
-  };
-
-  const handleCategoryManagement = () => {
-    navigate('/admin/menu-categories');
-  };
-
-  const handleBulkOperations = () => {
-    navigate('/admin/menu-bulk-ops');
-  };
-
-  const handleTableManagement = () => {
-    navigate('/admin/tables');
-  };
-
   return (
     <DashboardLayout>
-      <div className="max-w-4xl">
-        <div className="bg-white rounded-lg shadow-xl p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Staff Dashboard - Show stats and audit logs */}
+        {(user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'waiter' || user?.role === 'kitchen') && (
+          <div className="mb-8">
+            {/* View Selector */}
+            <div className="bg-white rounded-lg shadow mb-6 p-4">
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => setActiveView('overview')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                    activeView === 'overview'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  📊 System Overview
+                </button>
+                <button
+                  onClick={() => setActiveView('audit-logs')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                    activeView === 'audit-logs'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  📋 Audit Logs
+                </button>
+                {user?.role === 'super_admin' && (
+                  <button
+                    onClick={() => setActiveView('system-config')}
+                    className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                      activeView === 'system-config'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    ⚙️ System Configuration
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Content based on active view */}
+            {activeView === 'overview' && <SystemStatsBoard />}
+            {activeView === 'audit-logs' && <AuditLogsViewer />}
+            {activeView === 'system-config' && user?.role === 'super_admin' && <SystemConfiguration />}
+          </div>
+        )}
+
+        <div className="bg-white rounded-lg shadow-xl p-8 mt-6">
           <h1 className="text-3xl font-bold text-gray-800 mb-6">Dashboard</h1>
 
           <div className="space-y-6">
@@ -54,6 +91,12 @@ export default function Dashboard() {
                       <span className="font-medium">User ID:</span> {profileData.user.id}
                     </p>
                   )}
+                  <p className="text-gray-600">
+                    <span className="font-medium">Role:</span>{' '}
+                    <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-semibold">
+                      {user?.role}
+                    </span>
+                  </p>
                 </div>
               )}
             </div>
@@ -77,25 +120,25 @@ export default function Dashboard() {
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <button
-                    onClick={handleMenuManagement}
+                    onClick={() => navigate('/admin/menu-items')}
                     className="bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
                   >
                     📋 Manage Menu Items
                   </button>
                   <button
-                    onClick={handleCategoryManagement}
+                    onClick={() => navigate('/admin/menu-categories')}
                     className="bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
                   >
                     📂 Manage Categories
                   </button>
                   <button
-                    onClick={handleBulkOperations}
+                    onClick={() => navigate('/admin/menu-bulk-ops')}
                     className="bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
                   >
                     📊 Bulk Operations
                   </button>
                   <button
-                    onClick={handleTableManagement}
+                    onClick={() => navigate('/admin/tables')}
                     className="bg-indigo-600 text-white px-4 py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
                   >
                     🪑 Manage Tables
