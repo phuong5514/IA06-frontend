@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../config/api';
 import DashboardLayout from '../components/DashboardLayout';
 import { TrendingUp, DollarSign, ShoppingBag, Calendar, Award } from 'lucide-react';
+import ReactECharts from 'echarts-for-react';
 
 interface RevenueByMenuItem {
   menu_item_id: number;
@@ -22,6 +23,18 @@ interface RevenueByTable {
 
 interface DailyActivity {
   date: string;
+  total_orders: number;
+  completed_orders: number;
+  cancelled_orders: number;
+  pending_orders: number;
+  total_revenue: string;
+  avg_order_value: string;
+}
+
+interface HourlyActivity {
+  hour: number;
+  date: string;
+  datetime: string;
   total_orders: number;
   completed_orders: number;
   cancelled_orders: number;
@@ -63,6 +76,7 @@ interface AnalyticsSummary {
 
 export default function RevenueAnalytics() {
   const [activeTab, setActiveTab] = useState<'summary' | 'menu-items' | 'tables' | 'daily' | 'popular'>('summary');
+  const [viewMode, setViewMode] = useState<'daily' | 'hourly'>('daily');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const selectedMonth = new Date().getMonth() + 1;
@@ -135,6 +149,20 @@ export default function RevenueAnalytics() {
     enabled: activeTab === 'daily' && !!startDate && !!endDate,
   });
 
+  // Fetch hourly activity
+  const { data: hourlyData, isLoading: hourlyLoading } = useQuery<{ data: HourlyActivity[] }>({
+    queryKey: ['analytics', 'hourly-activity', startDate, endDate],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+      
+      const response = await apiClient.get(`/analytics/hourly-activity?${params}`);
+      return response.data;
+    },
+    enabled: activeTab === 'daily' && !!startDate && !!endDate,
+  });
+
   // Fetch popular items
   const { data: popularData, isLoading: popularLoading } = useQuery<{ data: PopularItem[] }>({
     queryKey: ['analytics', 'popular-items', startDate, endDate],
@@ -172,6 +200,153 @@ export default function RevenueAnalytics() {
       day: 'numeric',
     });
   };
+
+  // Chart configurations
+  const getMenuItemsChartOption = (data: RevenueByMenuItem[]) => ({
+    title: { text: 'Top 10 Items by Revenue', left: 'center' },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    xAxis: { type: 'value', name: 'Revenue ($)' },
+    yAxis: { type: 'category', data: data.slice(0, 10).map(item => item.menu_item_name).reverse() },
+    series: [{
+      name: 'Revenue',
+      type: 'bar',
+      data: data.slice(0, 10).map(item => parseFloat(item.total_revenue)).reverse(),
+      itemStyle: { color: '#10b981' }
+    }]
+  });
+
+  const getTablesChartOption = (data: RevenueByTable[]) => ({
+    title: { text: 'Revenue by Tables', left: 'center' },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    xAxis: { type: 'category', data: data.map(table => table.table_number || 'No Table'), axisLabel: { rotate: 45 } },
+    yAxis: { type: 'value', name: 'Revenue ($)' },
+    series: [{
+      name: 'Revenue',
+      type: 'bar',
+      data: data.map(table => parseFloat(table.total_revenue)),
+      itemStyle: { color: '#6366f1' }
+    }]
+  });
+
+  const getDailyChartOption = (data: DailyActivity[]) => ({
+    title: { text: 'Daily Revenue & Orders', left: 'center' },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+    legend: { data: ['Revenue', 'Total Orders', 'Completed', 'Cancelled'], top: 30 },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    xAxis: { type: 'category', data: data.map(day => formatDate(day.date)), axisLabel: { rotate: 45 } },
+    yAxis: [
+      { type: 'value', name: 'Revenue ($)', position: 'left' },
+      { type: 'value', name: 'Orders', position: 'right' }
+    ],
+    series: [
+      { name: 'Revenue', type: 'line', yAxisIndex: 0, data: data.map(day => parseFloat(day.total_revenue)), smooth: true, itemStyle: { color: '#10b981' } },
+      { name: 'Total Orders', type: 'bar', yAxisIndex: 1, data: data.map(day => day.total_orders), itemStyle: { color: '#6366f1' } },
+      { name: 'Completed', type: 'line', yAxisIndex: 1, data: data.map(day => day.completed_orders), smooth: true, itemStyle: { color: '#22c55e' } },
+      { name: 'Cancelled', type: 'line', yAxisIndex: 1, data: data.map(day => day.cancelled_orders), smooth: true, itemStyle: { color: '#ef4444' } }
+    ]
+  });
+
+  const getHourlyChartOption = (data: HourlyActivity[]) => {
+    const formatHourLabel = (datetime: string) => {
+      const date = new Date(datetime);
+      const hour = date.getHours();
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour % 12 || 12;
+      return `${displayHour}${ampm}`;
+    };
+
+    return {
+      title: { text: 'Hourly Revenue & Orders', left: 'center' },
+      tooltip: { 
+        trigger: 'axis', 
+        axisPointer: { type: 'cross' },
+        formatter: (params: any) => {
+          const dataIndex = params[0].dataIndex;
+          const item = data[dataIndex];
+          const date = new Date(item.datetime);
+          const timeStr = date.toLocaleString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            hour: 'numeric',
+            hour12: true 
+          });
+          let result = `<strong>${timeStr}</strong><br/>`;
+          params.forEach((param: any) => {
+            result += `${param.marker} ${param.seriesName}: ${param.value}<br/>`;
+          });
+          return result;
+        }
+      },
+      legend: { data: ['Revenue', 'Total Orders', 'Completed', 'Cancelled'], top: 30 },
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+      dataZoom: [
+        { type: 'slider', start: 0, end: 100, height: 20, bottom: 10 },
+        { type: 'inside' }
+      ],
+      xAxis: { 
+        type: 'category', 
+        data: data.map(item => formatHourLabel(item.datetime)),
+        axisLabel: { rotate: 45, interval: 0 }
+      },
+      yAxis: [
+        { type: 'value', name: 'Revenue ($)', position: 'left' },
+        { type: 'value', name: 'Orders', position: 'right' }
+      ],
+      series: [
+        { 
+          name: 'Revenue', 
+          type: 'line', 
+          yAxisIndex: 0, 
+          data: data.map(item => parseFloat(item.total_revenue)), 
+          smooth: true, 
+          itemStyle: { color: '#10b981' },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(16, 185, 129, 0.3)' },
+                { offset: 1, color: 'rgba(16, 185, 129, 0.05)' }
+              ]
+            }
+          }
+        },
+        { name: 'Total Orders', type: 'bar', yAxisIndex: 1, data: data.map(item => item.total_orders), itemStyle: { color: '#6366f1' } },
+        { name: 'Completed', type: 'line', yAxisIndex: 1, data: data.map(item => item.completed_orders), smooth: true, itemStyle: { color: '#22c55e' } },
+        { name: 'Cancelled', type: 'line', yAxisIndex: 1, data: data.map(item => item.cancelled_orders), smooth: true, itemStyle: { color: '#ef4444' } }
+      ]
+    };
+  };
+
+  const getPopularBubbleChartOption = (data: PopularItem[]) => ({
+    title: { text: 'Popularity vs Revenue', subtext: 'Bubble size represents total quantity', left: 'center' },
+    tooltip: { trigger: 'item' },
+    grid: { left: '3%', right: '7%', bottom: '7%', containLabel: true },
+    xAxis: { type: 'value', name: 'Times Ordered', splitLine: { lineStyle: { type: 'dashed' } } },
+    yAxis: { type: 'value', name: 'Revenue ($)', splitLine: { lineStyle: { type: 'dashed' } } },
+    series: [{
+      name: 'Items',
+      type: 'scatter',
+      symbolSize: (val: number[]) => Math.sqrt(val[2]) * 3,
+      data: data.slice(0, 15).map(item => [item.times_ordered, parseFloat(item.total_revenue), item.total_quantity])
+    }]
+  });
+
+  const getPopularBarChartOption = (data: PopularItem[]) => ({
+    title: { text: 'Top 10 Most Ordered Items', left: 'center' },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    xAxis: { type: 'value', name: 'Times Ordered' },
+    yAxis: { type: 'category', data: data.slice(0, 10).map(item => item.menu_item_name).reverse() },
+    series: [{
+      name: 'Times Ordered',
+      type: 'bar',
+      data: data.slice(0, 10).map(item => item.times_ordered).reverse(),
+      itemStyle: { color: '#f59e0b' }
+    }]
+  });
 
   return (
     <DashboardLayout>
@@ -424,33 +599,38 @@ export default function RevenueAnalytics() {
                 {menuItemsLoading ? (
                   <div className="text-center py-8 text-gray-500">Loading...</div>
                 ) : menuItemsData?.data.length ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Menu Item</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Quantity Sold</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Revenue</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Price</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {menuItemsData.data.map((item, index) => (
-                          <tr key={item.menu_item_id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 text-sm text-gray-600">{index + 1}</td>
-                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.menu_item_name}</td>
-                            <td className="px-4 py-3 text-sm text-right text-gray-600">{item.total_quantity}</td>
-                            <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">
-                              {formatCurrency(item.total_revenue)}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-right text-gray-600">
-                              {formatCurrency(item.avg_price)}
-                            </td>
+                  <div className="space-y-6">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <ReactECharts option={getMenuItemsChartOption(menuItemsData.data)} style={{ height: '400px' }} />
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Menu Item</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Quantity Sold</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Revenue</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Price</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {menuItemsData.data.map((item, index) => (
+                            <tr key={item.menu_item_id} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 text-sm text-gray-600">{index + 1}</td>
+                              <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.menu_item_name}</td>
+                              <td className="px-4 py-3 text-sm text-right text-gray-600">{item.total_quantity}</td>
+                              <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">
+                                {formatCurrency(item.total_revenue)}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-right text-gray-600">
+                                {formatCurrency(item.avg_price)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">No data available for the selected period</div>
@@ -465,33 +645,38 @@ export default function RevenueAnalytics() {
                 {tablesLoading ? (
                   <div className="text-center py-8 text-gray-500">Loading...</div>
                 ) : tablesData?.data.length ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Table</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Orders</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Revenue</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Order Value</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {tablesData.data.map((table) => (
-                          <tr key={table.table_id || 'null'} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                              {table.table_number || 'No Table (Takeout)'}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-right text-gray-600">{table.total_orders}</td>
-                            <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">
-                              {formatCurrency(table.total_revenue)}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-right text-gray-600">
-                              {formatCurrency(table.avg_order_value)}
-                            </td>
+                  <div className="space-y-6">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <ReactECharts option={getTablesChartOption(tablesData.data)} style={{ height: '400px' }} />
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Table</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Orders</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Revenue</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Order Value</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {tablesData.data.map((table) => (
+                            <tr key={table.table_id || 'null'} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                {table.table_number || 'No Table (Takeout)'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-right text-gray-600">{table.total_orders}</td>
+                              <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">
+                                {formatCurrency(table.total_revenue)}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-right text-gray-600">
+                                {formatCurrency(table.avg_order_value)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">No data available for the selected period</div>
@@ -502,39 +687,87 @@ export default function RevenueAnalytics() {
             {/* Daily Activity Tab */}
             {activeTab === 'daily' && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Daily Order Activity</h3>
-                {dailyLoading ? (
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Order Activity & Revenue Trends</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setViewMode('daily')}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                        viewMode === 'daily'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      📅 Daily View
+                    </button>
+                    <button
+                      onClick={() => setViewMode('hourly')}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                        viewMode === 'hourly'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      📊 Hourly View
+                    </button>
+                  </div>
+                </div>
+                {dailyLoading || hourlyLoading ? (
                   <div className="text-center py-8 text-gray-500">Loading...</div>
                 ) : dailyData?.data.length ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Orders</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Completed</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cancelled</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Revenue</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Order</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {dailyData.data.map((day) => (
-                          <tr key={day.date} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{formatDate(day.date)}</td>
-                            <td className="px-4 py-3 text-sm text-right text-gray-600">{day.total_orders}</td>
-                            <td className="px-4 py-3 text-sm text-right text-green-600">{day.completed_orders}</td>
-                            <td className="px-4 py-3 text-sm text-right text-red-600">{day.cancelled_orders}</td>
-                            <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">
-                              {formatCurrency(day.total_revenue)}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-right text-gray-600">
-                              {formatCurrency(day.avg_order_value || 0)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="space-y-6">
+                    {/* Hourly Chart */}
+                    {viewMode === 'hourly' && hourlyData?.data && hourlyData.data.length > 0 && (
+                      <div>
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <ReactECharts key="hourly-chart" option={getHourlyChartOption(hourlyData.data)} style={{ height: '450px' }} notMerge={true} lazyUpdate={true} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Daily Chart */}
+                    {viewMode === 'daily' && (
+                      <div>
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <ReactECharts key="daily-chart" option={getDailyChartOption(dailyData.data)} style={{ height: '450px' }} notMerge={true} lazyUpdate={true} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Daily Table */}
+                    <div>
+                      <h4 className="text-md font-semibold text-gray-700 mb-3">📋 Daily Summary Table</h4>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Orders</th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Completed</th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cancelled</th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Order</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {dailyData.data.map((day) => (
+                              <tr key={day.date} className="hover:bg-gray-50">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900">{formatDate(day.date)}</td>
+                                <td className="px-4 py-3 text-sm text-right text-gray-600">{day.total_orders}</td>
+                                <td className="px-4 py-3 text-sm text-right text-green-600">{day.completed_orders}</td>
+                                <td className="px-4 py-3 text-sm text-right text-red-600">{day.cancelled_orders}</td>
+                                <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">
+                                  {formatCurrency(day.total_revenue)}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-right text-gray-600">
+                                  {formatCurrency(day.avg_order_value || 0)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">No data available for the selected period</div>
@@ -549,35 +782,43 @@ export default function RevenueAnalytics() {
                 {popularLoading ? (
                   <div className="text-center py-8 text-gray-500">Loading...</div>
                 ) : popularData?.data.length ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Menu Item</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Times Ordered</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Qty</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Revenue</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {popularData.data.map((item, index) => (
-                          <tr key={item.menu_item_id} className={`hover:bg-gray-50 ${index < 3 ? 'bg-yellow-50' : ''}`}>
-                            <td className="px-4 py-3 text-sm text-gray-600">
-                              {index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}`}
-                            </td>
-                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.menu_item_name}</td>
-                            <td className="px-4 py-3 text-sm text-gray-600">{item.category_name}</td>
-                            <td className="px-4 py-3 text-sm text-right text-gray-600">{item.times_ordered}</td>
-                            <td className="px-4 py-3 text-sm text-right text-gray-600">{item.total_quantity}</td>
-                            <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">
-                              {formatCurrency(item.total_revenue)}
-                            </td>
+                  <div className="space-y-6">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <ReactECharts option={getPopularBubbleChartOption(popularData.data)} style={{ height: '400px' }} />
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <ReactECharts option={getPopularBarChartOption(popularData.data)} style={{ height: '400px' }} />
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Menu Item</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Times Ordered</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Qty</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Revenue</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {popularData.data.map((item, index) => (
+                            <tr key={item.menu_item_id} className={`hover:bg-gray-50 ${index < 3 ? 'bg-yellow-50' : ''}`}>
+                              <td className="px-4 py-3 text-sm text-gray-600">
+                                {index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}`}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.menu_item_name}</td>
+                              <td className="px-4 py-3 text-sm text-gray-600">{item.category_name}</td>
+                              <td className="px-4 py-3 text-sm text-right text-gray-600">{item.times_ordered}</td>
+                              <td className="px-4 py-3 text-sm text-right text-gray-600">{item.total_quantity}</td>
+                              <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">
+                                {formatCurrency(item.total_revenue)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">No data available for the selected period</div>
