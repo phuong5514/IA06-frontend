@@ -39,6 +39,8 @@ export default function MenuCustomer() {
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'none' | 'popularity'>('none');
+  const [showChefRecommendation, setShowChefRecommendation] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const navigate = useNavigate();
   const { addItem, setTableId } = useCart();
@@ -239,6 +241,16 @@ export default function MenuCustomer() {
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
+    }
+
+    if (showChefRecommendation) {
+      filtered = filtered.filter(item => item.chef_recommendation === true);
+    }
+
+    // Sort by popularity if selected
+    if (sortBy === 'popularity') {
+      // Items with higher display_order are considered more popular
+      filtered = [...filtered].sort((a, b) => (b.display_order || 0) - (a.display_order || 0));
     }
 
     return filtered;
@@ -517,6 +529,44 @@ export default function MenuCustomer() {
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          {/* Sort and Additional Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {/* Sort By */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Sort By
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'none' | 'popularity')}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="none">Default Order</option>
+                <option value="popularity">Popularity</option>
+              </select>
+            </div>
+
+            {/* Chef Recommendation Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Special Filters
+              </label>
+              <button
+                onClick={() => setShowChefRecommendation(!showChefRecommendation)}
+                className={`w-full px-4 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                  showChefRecommendation
+                    ? 'bg-amber-500 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+                <span>{showChefRecommendation ? "Chef's Picks Only" : "Show Chef's Picks"}</span>
+              </button>
             </div>
           </div>
 

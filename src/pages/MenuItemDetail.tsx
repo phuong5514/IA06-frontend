@@ -59,6 +59,7 @@ export default function MenuItemDetail() {
   const [quantity, setQuantity] = useState(1);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0);
+  const [relatedItems, setRelatedItems] = useState<MenuItem[]>([]);
   
   // Get edit mode from URL params
   const [searchParams] = useState(() => new URLSearchParams(window.location.search));
@@ -99,10 +100,53 @@ export default function MenuItemDetail() {
       setError(null);
       const response = await apiClient.get(API_ENDPOINTS.MENU_ITEM(itemId));
       setItem(response.data);
+      // Fetch related items after getting the main item
+      fetchRelatedItems(response.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch menu item');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRelatedItems = async (currentItem: MenuItem) => {
+    try {
+      // Fetch all menu items
+      const response = await apiClient.get('/menu/items?available_only=true');
+      const allItems: MenuItem[] = response.data.items || [];
+      
+      // Filter and score related items
+      const scoredItems = allItems
+        .filter(item => item.id !== currentItem.id) // Exclude current item
+        .map(item => {
+          let score = 0;
+          
+          // Same category gets 3 points
+          if (item.category_id === currentItem.category_id) {
+            score += 3;
+          }
+          
+          // Each matching dietary tag gets 1 point
+          const matchingTags = item.dietary_tags?.filter(tag => 
+            currentItem.dietary_tags?.includes(tag)
+          ) || [];
+          score += matchingTags.length;
+          
+          // Chef recommendations get bonus point
+          if (item.chef_recommendation && currentItem.chef_recommendation) {
+            score += 1;
+          }
+          
+          return { item, score };
+        })
+        .filter(({ score }) => score > 0) // Only items with some relevance
+        .sort((a, b) => b.score - a.score) // Sort by score descending
+        .slice(0, 4) // Take top 4
+        .map(({ item }) => item);
+      
+      setRelatedItems(scoredItems);
+    } catch (err) {
+      console.error('Failed to fetch related items:', err);
     }
   };
 
@@ -390,8 +434,64 @@ export default function MenuItemDetail() {
             </div>
           </div>
 
+          {/* Related Items Section */}
+          {relatedItems.length > 0 && (
+            <div className="mt-8 border-t pt-8 px-8">
+              <h2 className="text-2xl font-bold mb-4">You May Also Like</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {relatedItems.map(relatedItem => (
+                  <div
+                    key={relatedItem.id}
+                    onClick={() => navigate(`/menu/item/${relatedItem.id}`)}
+                    className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow border border-gray-200"
+                  >
+                    {relatedItem.image_url && (
+                      <img
+                        src={relatedItem.image_url}
+                        alt={relatedItem.name}
+                        className="w-full h-32 object-cover"
+                      />
+                    )}
+                    <div className="p-3">
+                      <h3 className="font-semibold text-sm mb-1 truncate">{relatedItem.name}</h3>
+                      <div className="flex items-center justify-between">
+                        <span className="text-green-600 font-bold text-sm">
+                          ${parseFloat(relatedItem.price).toFixed(2)}
+                        </span>
+                        {relatedItem.chef_recommendation && (
+                          <span className="text-yellow-500" title="Chef's Choice">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          </span>
+                        )}
+                      </div>
+                      {/* Show matching tags */}
+                      {relatedItem.dietary_tags && relatedItem.dietary_tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {relatedItem.dietary_tags
+                            .filter(tag => item?.dietary_tags?.includes(tag))
+                            .slice(0, 2)
+                            .map(tag => (
+                              <span
+                                key={tag}
+                                className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
+                              >
+                                {tag.replace('-', ' ')}
+                              </span>
+                            ))
+                          }
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Reviews Section */}
-          <div className="mt-8 border-t pt-8">
+          <div className="mt-8 border-t pt-8 px-8">
             <h2 className="text-2xl font-bold mb-4">Customer Reviews</h2>
             
             {/* Average Rating */}

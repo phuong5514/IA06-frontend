@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiClient as api } from '../config/api';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -140,6 +141,20 @@ export default function Register() {
             </Link>
           </p>
         </div>
+        
+        {/* Google Sign In Button */}
+        <GoogleSignInButton disabled={loading} />
+
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-gray-50 text-gray-500">Or register with email</span>
+          </div>
+        </div>
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
             {/* Email */}
