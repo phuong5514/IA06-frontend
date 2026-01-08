@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+:root {
+  /* Default theme colors - will be overridden by settings */
+  --primary-color: #4F46E5;
+  --secondary-color: #10B981;
+  --primary-hover: #4338CA;
+  --secondary-hover: #059669;
+}
+
 #root {
   width: 100%;
   margin: 0;
