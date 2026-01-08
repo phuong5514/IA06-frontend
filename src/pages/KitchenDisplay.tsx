@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
+import { useSettings } from '../context/SettingsContext';
 import DashboardLayout from '../components/DashboardLayout';
 
 interface OrderItem {
@@ -48,6 +49,7 @@ export default function KitchenDisplay() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const { onNewOrder, onOrderStatusChange, onOrderAccepted, isConnected } = useWebSocket();
+  const { workflow } = useSettings();
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -274,13 +276,25 @@ export default function KitchenDisplay() {
 
   const getEstimatedPrepTime = (items: OrderItem[]): number => {
     if (!items.length) return 0;
-    const totalMinutes = items.reduce((sum, item) => sum + (item.preparation_time || 15), 0);
+    const defaultPrepTime = workflow.kitchenPreparationAlertTime || 15;
+    const totalMinutes = items.reduce((sum, item) => sum + (item.preparation_time || defaultPrepTime), 0);
     return Math.ceil(totalMinutes / items.length); // Average prep time
   };
 
+  const getOrderUrgencyLevel = (createdAt: string): 'normal' | 'warning' | 'urgent' => {
+    const elapsed = getOrderElapsedTime(createdAt) / 60; // Convert to minutes
+    const alertThreshold = workflow.kitchenPreparationAlertTime || 15;
+    
+    if (elapsed >= alertThreshold) {
+      return 'urgent'; // Red - exceeded alert threshold
+    } else if (elapsed >= alertThreshold * 0.75) {
+      return 'warning'; // Yellow - approaching alert threshold (75%)
+    }
+    return 'normal'; // Blue - within acceptable time
+  };
+
   const isRushOrder = (createdAt: string, estimatedMinutes: number): boolean => {
-    const elapsed = getOrderElapsedTime(createdAt) / 60;
-    return elapsed > estimatedMinutes * 1.5; // 150% over estimated time
+    return getOrderUrgencyLevel(createdAt) === 'urgent';
   };
 
   const getStatusColor = (status: string) => {
@@ -479,7 +493,9 @@ export default function KitchenDisplay() {
             {orders.map((order) => {
               const elapsedSeconds = getOrderElapsedTime(order.created_at);
               const estimatedTime = getEstimatedPrepTime(order.items);
-              const isUrgent = isRushOrder(order.created_at, estimatedTime);
+              const urgencyLevel = getOrderUrgencyLevel(order.created_at);
+              const isUrgent = urgencyLevel === 'urgent';
+              const isWarning = urgencyLevel === 'warning';
               const allItemsReady = areAllItemsReady(order.id, order.items);
 
               return (
@@ -488,6 +504,8 @@ export default function KitchenDisplay() {
                   className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-all border-2 ${
                     isUrgent && order.status === 'preparing'
                       ? 'border-red-400 ring-4 ring-red-100'
+                      : isWarning && order.status === 'preparing'
+                      ? 'border-yellow-400 ring-3 ring-yellow-100'
                       : order.status === 'preparing'
                       ? 'border-purple-300 ring-2 ring-purple-100'
                       : order.status === 'ready'
@@ -520,17 +538,27 @@ export default function KitchenDisplay() {
                       
                       {/* Preparation Timer */}
                       <div className={`p-3 rounded-lg mb-2 ${
-                        isUrgent ? 'bg-red-100 border-2 border-red-400' : 'bg-blue-50 border-2 border-blue-200'
+                        isUrgent 
+                          ? 'bg-red-100 border-2 border-red-400' 
+                          : isWarning
+                          ? 'bg-yellow-100 border-2 border-yellow-400'
+                          : 'bg-blue-50 border-2 border-blue-200'
                       }`}>
                         <div className="flex justify-between items-center">
                           <div>
                             <div className={`text-3xl font-bold ${
-                              isUrgent ? 'text-red-600 animate-pulse' : 'text-blue-600'
+                              isUrgent 
+                                ? 'text-red-600 animate-pulse' 
+                                : isWarning
+                                ? 'text-yellow-600'
+                                : 'text-blue-600'
                             }`}>
                               {formatTimer(elapsedSeconds)}
                             </div>
                             <div className="text-xs text-gray-600">
-                              Est: {estimatedTime} min {isUrgent && '⚠️ OVERDUE'}
+                              Alert at: {workflow.kitchenPreparationAlertTime || 15} min 
+                              {isUrgent && ' ⚠️ OVERDUE'}
+                              {isWarning && ' ⏰ WARNING'}
                             </div>
                           </div>
                           <div className="text-right">
