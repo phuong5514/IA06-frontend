@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { CreditCard, Banknote, Receipt, ArrowLeft, Loader2, Cross } from 'lucide-react';
+import { CreditCard, Banknote, Receipt, ArrowLeft, Loader2, Cross, AlertCircle } from 'lucide-react';
 import { apiClient } from '../config/api';
 // import DashboardLayout from '../components/DashboardLayout';
 
@@ -272,9 +272,7 @@ const CustomerBilling = () => {
             <div className="bg-red-50 border-l-4 border-red-500 p-6 mb-6">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <AlertCircle className="w-6 h-6 text-red-500" />
                 </div>
                 <div className="ml-3 flex-1">
                   <h3 className="text-lg font-semibold text-red-800 mb-2">Payment Failed</h3>

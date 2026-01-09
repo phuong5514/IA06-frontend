@@ -9,6 +9,7 @@ import { useWebSocket } from '../context/WebSocketContext';
 import { useQuery } from '@tanstack/react-query';
 import QRScannerModal from '../components/QRScannerModal';
 import menuBackground from '../assets/menu_background.png';
+import { Check, QrCode, Heart, Clock, Search, Star, Settings, Info } from 'lucide-react';
 
 interface MenuCategory {
   id: number;
@@ -342,9 +343,7 @@ export default function MenuCustomer() {
               {/* Table Session Indicator */}
               {isSessionActive && session && (
                 <div className="bg-green-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg border border-white/20 flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                  <Check className="w-5 h-5" />
                   <span className="font-medium">Table {session.tableNumber}</span>
                 </div>
               )}
@@ -354,14 +353,7 @@ export default function MenuCustomer() {
                 onClick={() => setShowQRScanner(true)}
                 className="bg-indigo-600/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg hover:bg-indigo-700/90 transition-colors border border-white/20 flex items-center gap-2"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
-                  />
-                </svg>
+                <QrCode className="w-5 h-5" />
                 <span className="font-medium">Scan QR</span>
               </button>
             </div>
@@ -389,9 +381,7 @@ export default function MenuCustomer() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
+                <Heart className="w-5 h-5" />
                 <span>For You</span>
                 {preferenceMatchCount > 0 && (
                   <span className="bg-white/20 px-2 py-0.5 rounded-full text-sm">
@@ -408,9 +398,7 @@ export default function MenuCustomer() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <Clock className="w-5 h-5" />
                 <span>Order Again</span>
                 {pastOrdersCount > 0 && (
                   <span className="bg-white/20 px-2 py-0.5 rounded-full text-sm">
@@ -427,9 +415,7 @@ export default function MenuCustomer() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+                <Search className="w-5 h-5" />
                 <span>Explore All</span>
               </button>
             </div>
@@ -438,9 +424,7 @@ export default function MenuCustomer() {
             <div className="mt-4 text-sm text-gray-600">
               {activeSection === 'preferences' && (
                 <p className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
+                  <Info className="w-4 h-4 text-indigo-600" />
                   Items matching your dietary preferences
                   {preferenceMatchCount === 0 && preferencesData?.preferences?.dietary_tags?.length === 0 && (
                     <span className="text-orange-600 ml-1">(Set your preferences in profile to see personalized recommendations)</span>
@@ -449,17 +433,13 @@ export default function MenuCustomer() {
               )}
               {activeSection === 'past-orders' && (
                 <p className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
+                  <Info className="w-4 h-4 text-indigo-600" />
                   Items you've ordered before - reorder your favorites!
                 </p>
               )}
               {activeSection === 'explore' && (
                 <p className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
+                  <Info className="w-4 h-4 text-indigo-600" />
                   Browse our complete menu
                 </p>
               )}
@@ -483,19 +463,9 @@ export default function MenuCustomer() {
                   placeholder="Search dishes..."
                   className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-                <svg
+                <Search
                   className="absolute left-3 top-3.5 w-5 h-5 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
+                />
               </div>
             </div>
 
@@ -549,9 +519,7 @@ export default function MenuCustomer() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
                 }`}
               >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
+                <Star className="w-5 h-5" fill={showChefRecommendation ? "currentColor" : "none"} />
                 <span>{showChefRecommendation ? "Chef's Picks Only" : "Show Chef's Picks"}</span>
               </button>
             </div>
@@ -594,17 +562,13 @@ export default function MenuCustomer() {
                 <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
                   {isPreferenceMatch(item) && (
                     <span className="px-2 py-1 bg-indigo-600 text-white text-xs rounded-full shadow-md flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                      </svg>
+                      <Heart className="w-3 h-3" fill="currentColor" />
                       For You
                     </span>
                   )}
                   {isPastOrdered(item) && (
                     <span className="px-2 py-1 bg-green-600 text-white text-xs rounded-full shadow-md flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
+                      <Check className="w-3 h-3" />
                       Ordered Before
                     </span>
                   )}
@@ -675,26 +639,19 @@ export default function MenuCustomer() {
           <div className="col-span-full text-center text-white bg-white/10 backdrop-blur-sm px-6 py-8 rounded-lg">
             {activeSection === 'preferences' && preferencesData?.preferences?.dietary_tags?.length === 0 ? (
               <div className="space-y-3">
-                <svg className="w-16 h-16 mx-auto text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
+                <Heart className="w-16 h-16 mx-auto text-white/60" />
                 <p className="text-white/60 text-lg font-medium">Set your food preferences to get personalized recommendations!</p>
                 <button
                   onClick={() => navigate('/profile')}
                   className="mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors inline-flex items-center gap-2"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
+                  <Settings className="w-5 h-5" />
                   Go to Profile Settings
                 </button>
               </div>
             ) : activeSection === 'past-orders' && ordersData?.orders?.length === 0 ? (
               <div className="space-y-3">
-                <svg className="w-16 h-16 mx-auto text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <Clock className="w-16 h-16 mx-auto text-white/60" />
                 <p className="text-lg font-medium text-white/80">You haven't placed any orders yet!</p>
                 <p className="text-white/80">Start exploring our menu and place your first order.</p>
                 <button
@@ -706,9 +663,7 @@ export default function MenuCustomer() {
               </div>
             ) : (
               <div className="space-y-3">
-                <svg className="w-16 h-16 mx-auto text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <Search className="w-16 h-16 mx-auto text-white/60" />
                 <p className="text-lg font-medium">No items found matching your criteria.</p>
                 <p className="text-white/80">Try adjusting your filters or search query.</p>
               </div>

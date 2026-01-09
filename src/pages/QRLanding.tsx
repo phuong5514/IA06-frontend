@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiClient } from '../config/api';
+import { X, Check } from 'lucide-react';
 
 interface TableInfo {
   table_id: number;
@@ -68,19 +69,7 @@ export default function QRLanding() {
         {!loading && error && (
           <div className="text-center">
             <div className="bg-red-100 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="h-8 w-8 text-red-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <X className="h-8 w-8 text-red-600" />
             </div>
             <h2 className="text-2xl font-bold text-gray-800 mb-2">Verification Failed</h2>
             <p className="text-red-600 mb-4">{error}</p>
@@ -96,19 +85,7 @@ export default function QRLanding() {
         {!loading && tableInfo && (
           <div className="text-center">
             <div className="bg-green-100 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="h-8 w-8 text-green-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+              <Check className="h-8 w-8 text-green-600" />
             </div>
             <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome!</h2>
             <p className="text-gray-600 mb-2">

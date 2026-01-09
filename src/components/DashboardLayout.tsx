@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { Menu } from 'lucide-react';
 import Navigation from './Navigation';
 import logo from '../assets/logo.png';
 
@@ -34,9 +35,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="mr-4 p-2 rounded-md hover:bg-gray-100"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <Menu className="w-6 h-6" />
             </button>
             <img
               src={branding.logoUrl || logo}
