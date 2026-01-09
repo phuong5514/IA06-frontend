@@ -12,7 +12,6 @@ export default function SystemConfiguration() {
   const [activeTab, setActiveTab] = useState<'branding' | 'workflow' | 'general'>('branding');
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
@@ -152,7 +151,6 @@ export default function SystemConfiguration() {
         return;
       }
 
-      setLogoFile(file);
       const reader = new FileReader();
       reader.onload = () => {
         setLogoPreview(reader.result as string);

@@ -7,7 +7,7 @@ import { useState } from 'react';
 import SystemStatsBoard from '../components/SystemStatsBoard';
 import AuditLogsViewer from '../components/AuditLogsViewer';
 import SystemConfiguration from '../components/SystemConfiguration';
-import { BarChart3, FileText, Settings, Wrench, Clipboard, FolderOpen, BarChart2, Armchair, TrendingUp, UtensilsCrossed, DollarSign, ChefHat } from 'lucide-react';
+import { BarChart3, FileText, Settings } from 'lucide-react';
 
 export default function Dashboard() {
   const { user } = useAuth();

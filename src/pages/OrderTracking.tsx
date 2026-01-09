@@ -4,8 +4,7 @@ import toast from 'react-hot-toast';
 import { apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
-import { Check, CheckCircle, PartyPopper, XCircle, Frown, ChefHat, Utensils, Ban } from 'lucide-react';
-import { ArrowLeft, Star } from 'lucide-react';
+import { Check, CheckCircle, PartyPopper, Frown, ChefHat, Utensils, Ban } from 'lucide-react';
 
 interface OrderItem {
   id: number;

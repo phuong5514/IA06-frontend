@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import { useSettings } from '../context/SettingsContext';
 import DashboardLayout from '../components/DashboardLayout';
-import { Sparkles, ClipboardList, Bell, ChefHat, CheckCircle, Flame, Utensils, Clock, AlertTriangle, Lightbulb, AlertCircle, FileEdit } from 'lucide-react';
+import { Sparkles, ClipboardList, ChefHat, CheckCircle, Flame, Utensils, Clock, AlertTriangle, Lightbulb, AlertCircle, FileEdit } from 'lucide-react';
 
 interface OrderItem {
   id: number;
@@ -295,7 +295,7 @@ export default function KitchenDisplay() {
     return 'normal'; // Blue - within acceptable time
   };
 
-  const isRushOrder = (createdAt: string, estimatedMinutes: number): boolean => {
+  const isRushOrder = (createdAt: string): boolean => {
     return getOrderUrgencyLevel(createdAt) === 'urgent';
   };
 
@@ -312,14 +312,7 @@ export default function KitchenDisplay() {
     }
   };
 
-  const getTimeSinceOrder = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const minutes = Math.floor((now.getTime() - date.getTime()) / 60000);
-    
-    if (minutes < 1) return 'Just now';
-    return `${minutes} min`;
-  };
+
 
   if (loading && orders.length === 0) {
     return (
@@ -411,8 +404,7 @@ export default function KitchenDisplay() {
 
         {/* Rush Orders Section */}
         {orders.filter(order => {
-          const estimatedTime = getEstimatedPrepTime(order.items);
-          return order.status === 'preparing' && isRushOrder(order.created_at, estimatedTime);
+          return order.status === 'preparing' && isRushOrder(order.created_at);
         }).length > 0 && (
           <div className="mb-6">
             <div className="bg-red-50 border-2 border-red-500 rounded-lg p-4 mb-4">
@@ -424,8 +416,7 @@ export default function KitchenDisplay() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {orders
                   .filter(order => {
-                    const estimatedTime = getEstimatedPrepTime(order.items);
-                    return order.status === 'preparing' && isRushOrder(order.created_at, estimatedTime);
+                    return order.status === 'preparing' && isRushOrder(order.created_at);
                   })
                   .map(order => {
                     const elapsedSeconds = getOrderElapsedTime(order.created_at);
@@ -494,7 +485,6 @@ export default function KitchenDisplay() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {orders.map((order) => {
               const elapsedSeconds = getOrderElapsedTime(order.created_at);
-              const estimatedTime = getEstimatedPrepTime(order.items);
               const urgencyLevel = getOrderUrgencyLevel(order.created_at);
               const isUrgent = urgencyLevel === 'urgent';
               const isWarning = urgencyLevel === 'warning';

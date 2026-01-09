@@ -219,7 +219,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
       setUploadProgress('Confirming upload...');
 
       // Step 3: Confirm upload and get processed URLs
-      const confirmResponse = await apiClient.post(`/menu/items/${idToUse}/image/confirm`, {
+      await apiClient.post(`/menu/items/${idToUse}/image/confirm`, {
         gcsFileName,
       });
 
