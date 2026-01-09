@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../config/api';
 import { useNavigate, Link } from 'react-router-dom';
-import { Plus, Home, ChevronRight, ChevronLeft, ChevronDown } from 'lucide-react';
+import { Plus, Home, ChevronRight } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import StarRating from '../components/StarRating';
 import ReviewManagementModal from '../components/ReviewManagementModal';

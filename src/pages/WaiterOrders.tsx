@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { apiClient } from '../config/api';
@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import DashboardLayout from '../components/DashboardLayout';
 import RejectionModal from '../components/RejectionModal';
-import { Bell, CheckCircle, Check, Circle, List, Utensils, ScrollText, Clock, AlertTriangle, Package } from 'lucide-react';
+import { Bell, CheckCircle, Check, Circle, List, Utensils, ScrollText, Package } from 'lucide-react';
 
 interface OrderItem {
   id: number;
@@ -261,7 +261,7 @@ export default function WaiterOrders() {
     return Math.floor((now.getTime() - date.getTime()) / (1000 * 60)); // minutes
   };
 
-  const getPriorityLevel = (order: WaiterOrder): { level: 'high' | 'medium' | 'low'; color: string; icon: JSX.Element } => {
+  const getPriorityLevel = (order: WaiterOrder): { level: 'high' | 'medium' | 'low'; color: string; icon: React.ReactElement } => {
     const waitTime = getWaitTime(order.created_at);
     
     if (order.status === 'pending' && waitTime > 10) {

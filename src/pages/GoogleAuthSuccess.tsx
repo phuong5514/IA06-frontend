@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { tokenManager } from '../config/api';
-import { Check, X } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 export default function GoogleAuthSuccess() {
   const [searchParams] = useSearchParams();
