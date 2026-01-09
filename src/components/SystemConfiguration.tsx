@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { Settings, Palette, Zap, Wrench, Check } from 'lucide-react';
 
 export default function SystemConfiguration() {
   const { user } = useAuth();
@@ -243,14 +244,20 @@ export default function SystemConfiguration() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-red-600 to-pink-600 rounded-lg shadow-lg p-6 text-white">
-        <h2 className="text-2xl font-bold mb-2">⚙️ System Configuration</h2>
+        <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+          <Settings className="w-6 h-6" />
+          System Configuration
+        </h2>
         <p className="text-red-100">Configure restaurant-wide settings (Super Admin Only)</p>
       </div>
 
       {/* Success Message */}
       {successMessage && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="text-green-800 font-medium">✓ {successMessage}</p>
+          <p className="text-green-800 font-medium flex items-center gap-2">
+            <Check className="w-4 h-4" />
+            {successMessage}
+          </p>
         </div>
       )}
 
@@ -260,33 +267,36 @@ export default function SystemConfiguration() {
           <nav className="flex -mb-px">
             <button
               onClick={() => setActiveTab('branding')}
-              className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+              className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
                 activeTab === 'branding'
                   ? 'border-indigo-600 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              🎨 Branding
+              <Palette className="w-4 h-4" />
+              Branding
             </button>
             <button
               onClick={() => setActiveTab('workflow')}
-              className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+              className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
                 activeTab === 'workflow'
                   ? 'border-indigo-600 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              ⚡ Workflow
+              <Zap className="w-4 h-4" />
+              Workflow
             </button>
             <button
               onClick={() => setActiveTab('general')}
-              className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+              className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
                 activeTab === 'general'
                   ? 'border-indigo-600 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              🔧 General
+              <Wrench className="w-4 h-4" />
+              General
             </button>
           </nav>
         </div>

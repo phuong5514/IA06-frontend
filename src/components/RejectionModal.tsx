@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Package, ChefHat, Salad, Settings, Users, Edit3 } from 'lucide-react';
 
 interface RejectionModalProps {
   isOpen: boolean;
@@ -13,12 +13,12 @@ interface RejectionModalProps {
 }
 
 const REJECTION_REASONS = [
-  { value: 'out_of_stock', label: 'Out of Stock', icon: '📦' },
-  { value: 'kitchen_capacity', label: 'Kitchen at Capacity', icon: '👨‍🍳' },
-  { value: 'ingredient_unavailable', label: 'Ingredient Unavailable', icon: '🥗' },
-  { value: 'equipment_issue', label: 'Equipment Issue', icon: '⚙️' },
-  { value: 'staff_shortage', label: 'Staff Shortage', icon: '👥' },
-  { value: 'custom', label: 'Other (Custom Reason)', icon: '✏️' },
+  { value: 'out_of_stock', label: 'Out of Stock', icon: <Package className="w-5 h-5" /> },
+  { value: 'kitchen_capacity', label: 'Kitchen at Capacity', icon: <ChefHat className="w-5 h-5" /> },
+  { value: 'ingredient_unavailable', label: 'Ingredient Unavailable', icon: <Salad className="w-5 h-5" /> },
+  { value: 'equipment_issue', label: 'Equipment Issue', icon: <Settings className="w-5 h-5" /> },
+  { value: 'staff_shortage', label: 'Staff Shortage', icon: <Users className="w-5 h-5" /> },
+  { value: 'custom', label: 'Other (Custom Reason)', icon: <Edit3 className="w-5 h-5" /> },
 ];
 
 export default function RejectionModal({

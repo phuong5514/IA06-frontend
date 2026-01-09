@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import { useSettings } from '../context/SettingsContext';
 import DashboardLayout from '../components/DashboardLayout';
+import { Sparkles, ClipboardList, Bell, ChefHat, CheckCircle, Flame } from 'lucide-react';
 
 interface OrderItem {
   id: number;
@@ -163,9 +164,9 @@ export default function KitchenDisplay() {
       
       // Only show "new order" toast for pending orders (not yet accepted)
       if (order.status === 'pending') {
-        toast.success(`🆕 New Order #${order.id} - Waiting for waiter`, {
+        toast.success(`New Order #${order.id} - Waiting for waiter`, {
           duration: 5000,
-          icon: '📋',
+          icon: <ClipboardList className="w-5 h-5" />,
         });
       }
       
@@ -178,8 +179,9 @@ export default function KitchenDisplay() {
       
       // Show toast for ready status
       if (order.status === 'ready') {
-        toast.success(`✅ Order #${order.id} marked as ready!`, {
+        toast.success(`Order #${order.id} marked as ready!`, {
           duration: 3000,
+          icon: <CheckCircle className="w-5 h-5" />,
         });
       }
       
@@ -193,9 +195,9 @@ export default function KitchenDisplay() {
       if (audioRef.current) {
         audioRef.current.play().catch(e => console.log('Audio play failed:', e));
       }
-      toast.success(`🔔 Order #${order.id} ready to prepare!`, {
+      toast.success(`Order #${order.id} ready to prepare!`, {
         duration: 5000,
-        icon: '🍳',
+        icon: <ChefHat className="w-5 h-5" />,
         style: {
           background: '#10b981',
           color: '#fff',
@@ -381,9 +383,9 @@ export default function KitchenDisplay() {
         {/* Status Filter Tabs */}
         <div className="mb-6 flex space-x-2 bg-white rounded-lg p-2 shadow-sm">
           {[
-            { value: 'accepted', label: 'New Orders', icon: '🆕' },
-            { value: 'preparing', label: 'Preparing', icon: '🔥' },
-            { value: 'ready', label: 'Ready', icon: '✅' },
+            { value: 'accepted', label: 'New Orders', icon: <Sparkles className="w-5 h-5 inline" /> },
+            { value: 'preparing', label: 'Preparing', icon: <Flame className="w-5 h-5 inline" /> },
+            { value: 'ready', label: 'Ready', icon: <CheckCircle className="w-5 h-5 inline" /> },
           ].map((tab) => (
             <button
               key={tab.value}

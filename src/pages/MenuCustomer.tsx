@@ -9,7 +9,7 @@ import { useWebSocket } from '../context/WebSocketContext';
 import { useQuery } from '@tanstack/react-query';
 import QRScannerModal from '../components/QRScannerModal';
 import menuBackground from '../assets/menu_background.png';
-import { Check, QrCode, Heart, Clock, Search, Star, Settings, Info } from 'lucide-react';
+import { Check, QrCode, Heart, Clock, Search, Star, Settings, Info, CheckCircle, PartyPopper, Frown, ChefHat, Utensils, Ban } from 'lucide-react';
 
 interface MenuCategory {
   id: number;
@@ -74,25 +74,25 @@ export default function MenuCustomer() {
       if (order.user_id === String(user.id)) {
         switch (order.status) {
           case 'accepted':
-            toast.success(`✅ Order #${order.id} has been accepted!`, {
+            toast.success(`Order #${order.id} has been accepted!`, {
               duration: 5000,
-              icon: '🎉',
+              icon: <PartyPopper className="w-5 h-5" />,
             });
             break;          case 'rejected':
-            toast.error(`❌ Order #${order.id} has been rejected${order.rejection_reason ? `: ${order.rejection_reason}` : ''}`, {
+            toast.error(`Order #${order.id} has been rejected${order.rejection_reason ? `: ${order.rejection_reason}` : ''}`, {
               duration: 7000,
-              icon: '😔',
+              icon: <Frown className="w-5 h-5" />,
             });
             break;          case 'preparing':
-            toast.success(`👨‍🍳 Order #${order.id} is being prepared!`, {
+            toast.success(`Order #${order.id} is being prepared!`, {
               duration: 5000,
-              icon: '🍳',
+              icon: <ChefHat className="w-5 h-5" />,
             });
             break;
           case 'ready':
-            toast.success(`🎊 Order #${order.id} is ready!`, {
+            toast.success(`Order #${order.id} is ready!`, {
               duration: 6000,
-              icon: '✨',
+              icon: <CheckCircle className="w-5 h-5" />,
               style: {
                 background: '#10b981',
                 color: '#fff',
@@ -100,18 +100,21 @@ export default function MenuCustomer() {
             });
             break;
           case 'served':
-            toast.success(`🍽️ Order #${order.id} has been served!`, {
+            toast.success(`Order #${order.id} has been served!`, {
               duration: 4000,
+              icon: <Utensils className="w-5 h-5" />,
             });
             break;
           case 'completed':
-            toast.success(`✓ Order #${order.id} completed. Thank you!`, {
+            toast.success(`Order #${order.id} completed. Thank you!`, {
               duration: 3000,
+              icon: <Check className="w-5 h-5" />,
             });
             break;
           case 'cancelled':
             toast.error(`Order #${order.id} has been cancelled`, {
               duration: 5000,
+              icon: <Ban className="w-5 h-5" />,
             });
             break;
         }

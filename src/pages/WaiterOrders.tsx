@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import DashboardLayout from '../components/DashboardLayout';
 import RejectionModal from '../components/RejectionModal';
+import { Bell, Sparkles, Check, CheckCircle, Circle } from 'lucide-react';
 
 interface OrderItem {
   id: number;
@@ -103,9 +104,9 @@ export default function WaiterOrders() {
   useEffect(() => {
     const unsubscribeNewOrder = onNewOrder((order) => {
       console.log('New order received:', order);
-      toast.success(`🔔 New Order #${order.id}`, {
+      toast.success(`New Order #${order.id}`, {
         duration: 5000,
-        icon: '🆕',
+        icon: <Bell className="w-5 h-5" />,
       });
       // Refresh orders list and counts
       fetchOrders();
@@ -117,8 +118,9 @@ export default function WaiterOrders() {
       
       // Show toast for ready status
       if (order.status === 'ready') {
-        toast.success(`✅ Order #${order.id} is ready!`, {
+        toast.success(`Order #${order.id} is ready!`, {
           duration: 5000,
+          icon: <CheckCircle className="w-5 h-5" />,
         });
       }
       
@@ -129,8 +131,9 @@ export default function WaiterOrders() {
 
     const unsubscribeAccepted = onOrderAccepted((order) => {
       console.log('Order accepted:', order);
-      toast.success(`✓ Order #${order.id} accepted`, {
+      toast.success(`Order #${order.id} accepted`, {
         duration: 3000,
+        icon: <Check className="w-5 h-5" />,
       });
       fetchOrders();
       fetchOrderCounts();
@@ -258,20 +261,20 @@ export default function WaiterOrders() {
     return Math.floor((now.getTime() - date.getTime()) / (1000 * 60)); // minutes
   };
 
-  const getPriorityLevel = (order: WaiterOrder): { level: 'high' | 'medium' | 'low'; color: string; icon: string } => {
+  const getPriorityLevel = (order: WaiterOrder): { level: 'high' | 'medium' | 'low'; color: string; icon: JSX.Element } => {
     const waitTime = getWaitTime(order.created_at);
     
     if (order.status === 'pending' && waitTime > 10) {
-      return { level: 'high', color: 'text-red-600', icon: '🔴' };
+      return { level: 'high', color: 'text-red-600', icon: <Circle className="w-3 h-3 fill-red-600 text-red-600" /> };
     } else if (order.status === 'pending' && waitTime > 5) {
-      return { level: 'medium', color: 'text-orange-600', icon: '🟠' };
+      return { level: 'medium', color: 'text-orange-600', icon: <Circle className="w-3 h-3 fill-orange-600 text-orange-600" /> };
     } else if (order.status === 'ready' && waitTime > 15) {
-      return { level: 'high', color: 'text-red-600', icon: '🔴' };
+      return { level: 'high', color: 'text-red-600', icon: <Circle className="w-3 h-3 fill-red-600 text-red-600" /> };
     } else if (order.status === 'ready' && waitTime > 10) {
-      return { level: 'medium', color: 'text-orange-600', icon: '🟠' };
+      return { level: 'medium', color: 'text-orange-600', icon: <Circle className="w-3 h-3 fill-orange-600 text-orange-600" /> };
     }
     
-    return { level: 'low', color: 'text-green-600', icon: '🟢' };
+    return { level: 'low', color: 'text-green-600', icon: <Circle className="w-3 h-3 fill-green-600 text-green-600" /> };
   };
 
   const groupOrdersByTable = () => {
