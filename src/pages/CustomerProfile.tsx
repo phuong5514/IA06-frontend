@@ -1209,22 +1209,6 @@ export default function CustomerProfile() {
           {/* Tab Content */}
           <div className="p-6">{renderTabContent()}</div>
         </div>
-
-        {/* Quick Actions */}
-        <div className="mt-8 flex gap-4">
-          <button
-            onClick={() => navigate('/menu/customer')}
-            className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-lg"
-          >
-            Browse Menu
-          </button>
-          <button
-            onClick={() => navigate('/orders')}
-            className="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium shadow-lg"
-          >
-            My Orders
-          </button>
-        </div>
       </div>
     </div>
   );

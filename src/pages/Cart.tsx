@@ -157,7 +157,7 @@ export default function Cart() {
             onClick={() => navigate('/menu/customer')}
             className="text-indigo-600 hover:text-indigo-800 font-medium"
           >
-            Continue Shopping
+            Continue Ordering
           </button>
         </div>
 
