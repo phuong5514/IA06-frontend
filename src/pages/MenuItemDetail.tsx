@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { apiClient } from '../config/api';
 import { API_ENDPOINTS } from '../config/api';
 import { useCart } from '../context/CartContext';
 import type { CartModifier } from '../context/CartContext';
+import { useTableSession } from '../context/TableSessionContext';
 import StarRating from '../components/StarRating';
 import ReviewList from '../components/ReviewList';
 import ReviewForm from '../components/ReviewForm';
-import { ArrowLeft, ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Star, QrCode, Ban } from 'lucide-react';
 
 interface MenuItem {
   id: number;
@@ -53,6 +55,7 @@ export default function MenuItemDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addItem, items, updateItem } = useCart();
+  const { session, isSessionActive } = useTableSession();
   const [item, setItem] = useState<MenuItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,13 +101,13 @@ export default function MenuItemDetail() {
 
   const nextImage = () => {
     if (item?.images && item.images.length > 0) {
-      setCurrentImageIndex((prev) => (prev + 1) % item.images.length);
+      setCurrentImageIndex((prev) => (prev + 1) % item.images!.length);
     }
   };
 
   const previousImage = () => {
     if (item?.images && item.images.length > 0) {
-      setCurrentImageIndex((prev) => (prev - 1 + item.images.length) % item.images.length);
+      setCurrentImageIndex((prev) => (prev - 1 + item.images!.length) % item.images!.length);
     }
   };
 
@@ -205,13 +208,29 @@ export default function MenuItemDetail() {
   const handleOrder = () => {
     if (!item) return;
 
+    // Check if item is available
+    if (item.status === 'unavailable' || item.status === 'sold_out') {
+      toast.error(`This item is currently ${item.status === 'sold_out' ? 'sold out' : 'unavailable'}`);
+      return;
+    }
+
+    // Check if table session is active (QR code scanned) - only for new orders
+    if (!isEditMode && (!isSessionActive || !session)) {
+      toast.error('Please scan a table QR code first to place orders', {
+        duration: 4000,
+      });
+      // Redirect back to menu with instruction to scan QR
+      navigate('/menu');
+      return;
+    }
+
     // Check if all required modifiers are selected
     const missingRequired = item.modifiers?.find(
       group => group.is_required && (!selectedModifiers[group.id] || selectedModifiers[group.id].length === 0)
     );
 
     if (missingRequired) {
-      alert(`Please select an option for ${missingRequired.name}`);
+      toast.error(`Please select an option for ${missingRequired.name}`);
       return;
     }
 
@@ -246,11 +265,11 @@ export default function MenuItemDetail() {
     if (isEditMode && editCartItemId) {
       // Update existing item
       updateItem(editCartItemId, itemData);
-      alert('Order updated successfully!');
+      toast.success('Order updated successfully!');
     } else {
       // Add new item to cart
       addItem(itemData);
-      alert('Item added to cart!');
+      toast.success('Item added to cart!');
     }
 
     // Redirect to cart
@@ -467,6 +486,40 @@ export default function MenuItemDetail() {
 
             {/* Quantity and Order */}
             <div className="border-t pt-6">
+              {/* QR Code Warning - only for available items and non-edit mode */}
+              {item.status === 'available' && !isEditMode && (!isSessionActive || !session) && (
+                <div className="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+                  <div className="flex items-start">
+                    <QrCode className="w-6 h-6 text-yellow-600 mr-3 mt-0.5" />
+                    <div>
+                      <h3 className="text-sm font-medium text-yellow-800">Table QR Code Required</h3>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        Please scan a table QR code before placing your order. You'll be redirected to scan when you add this item.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Unavailable Item Warning */}
+              {(item.status === 'unavailable' || item.status === 'sold_out') && (
+                <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
+                  <div className="flex items-start">
+                    <Ban className="w-6 h-6 text-red-600 mr-3 mt-0.5" />
+                    <div>
+                      <h3 className="text-sm font-medium text-red-800">
+                        {item.status === 'sold_out' ? 'Sold Out' : 'Currently Unavailable'}
+                      </h3>
+                      <p className="text-sm text-red-700 mt-1">
+                        {item.status === 'sold_out' 
+                          ? 'This item is currently sold out. Please check back later or browse our other menu items.'
+                          : 'This item is temporarily unavailable. Please browse our other menu items.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-4">
                   <label className="font-medium">Quantity:</label>

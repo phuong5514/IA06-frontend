@@ -183,6 +183,21 @@ export default function MenuCustomer() {
   };
 
   const handleQuickAdd = (item: MenuItem) => {
+    // Check if item is available
+    if (item.status === 'unavailable' || item.status === 'sold_out') {
+      toast.error(`${item.name} is currently ${item.status === 'sold_out' ? 'sold out' : 'unavailable'}`);
+      return;
+    }
+
+    // Check if table session is active (QR code scanned)
+    if (!isSessionActive || !session) {
+      toast.error('Please scan a table QR code first to place orders', {
+        duration: 4000,
+      });
+      setShowQRScanner(true);
+      return;
+    }
+
     addItem({
       menuItemId: item.id,
       name: item.name,
@@ -192,7 +207,26 @@ export default function MenuCustomer() {
       modifiers: [],
       specialInstructions: undefined,
     });
-    alert('Item added to cart!');
+    toast.success('Item added to cart!');
+  };
+
+  const handleViewDetails = (item: MenuItem) => {
+    // For unavailable items, allow viewing details but don't require QR scan
+    if (item.status === 'unavailable' || item.status === 'sold_out') {
+      navigate(`/menu/item/${item.id}`);
+      return;
+    }
+
+    // For available items, check if table session is active
+    if (!isSessionActive || !session) {
+      toast.error('Please scan a table QR code first to place orders', {
+        duration: 4000,
+      });
+      setShowQRScanner(true);
+      return;
+    }
+
+    navigate(`/menu/item/${item.id}`);
   };
 
   const handleQRScanSuccess = () => {
@@ -215,7 +249,7 @@ export default function MenuCustomer() {
       
       const [categoriesResponse, itemsResponse] = await Promise.all([
         apiClient.get('/menu/categories'),
-        apiClient.get('/menu/items?available_only=true'),
+        apiClient.get('/menu/items'),
       ]);
 
       console.log('Menu fetched successfully:', { 
@@ -558,8 +592,21 @@ export default function MenuCustomer() {
 
         {/* Menu Items Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayItems.map(item => (
-            <div key={item.id} className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl overflow-hidden border border-white/30 relative">
+          {displayItems.map(item => {
+            const isUnavailable = item.status === 'unavailable' || item.status === 'sold_out';
+            return (
+            <div key={item.id} className={`bg-white/95 backdrop-blur-sm rounded-lg shadow-xl overflow-hidden border border-white/30 relative ${
+              isUnavailable ? 'opacity-60 grayscale' : ''
+            }`}>
+              {/* Status Badge for unavailable items */}
+              {isUnavailable && (
+                <div className="absolute top-2 right-2 z-20">
+                  <span className="px-3 py-1 bg-red-600 text-white text-sm font-semibold rounded-full shadow-lg flex items-center gap-1">
+                    <Ban className="w-4 h-4" />
+                    {item.status === 'sold_out' ? 'Sold Out' : 'Unavailable'}
+                  </span>
+                </div>
+              )}
               {/* Badges for preference match and past orders */}
               {user && (
                 <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
@@ -578,19 +625,34 @@ export default function MenuCustomer() {
                 </div>
               )}
               {item.image_url && (
-                <img
-                  src={item.image_url}
-                  alt={item.name}
-                  className="w-full h-48 object-cover"
-                />
+                <div className="relative">
+                  <img
+                    src={item.image_url}
+                    alt={item.name}
+                    className="w-full h-48 object-cover"
+                  />
+                  {isUnavailable && (
+                    <div className="absolute inset-0 bg-gray-900/50 flex items-center justify-center">
+                      <span className="text-white text-xl font-bold">
+                        {item.status === 'sold_out' ? 'SOLD OUT' : 'UNAVAILABLE'}
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
               <div className="p-4">
-                <h3 className="text-lg font-semibold mb-2">{item.name}</h3>
+                <h3 className={`text-lg font-semibold mb-2 ${
+                  isUnavailable ? 'text-gray-500' : ''
+                }`}>{item.name}</h3>
                 {item.description && (
-                  <p className="text-gray-600 text-sm mb-2">{item.description}</p>
+                  <p className={`text-sm mb-2 ${
+                    isUnavailable ? 'text-gray-400' : 'text-gray-600'
+                  }`}>{item.description}</p>
                 )}
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-lg font-bold text-green-600">
+                  <span className={`text-lg font-bold ${
+                    isUnavailable ? 'text-gray-400' : 'text-green-600'
+                  }`}>
                     ${parseFloat(item.price).toFixed(2)}
                   </span>
                 </div>
@@ -599,7 +661,11 @@ export default function MenuCustomer() {
                     {item.dietary_tags.map(tag => (
                       <span
                         key={tag}
-                        className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full capitalize"
+                        className={`px-2 py-1 text-xs rounded-full capitalize ${
+                          isUnavailable 
+                            ? 'bg-gray-200 text-gray-500' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}
                       >
                         {tag.replace('-', ' ')}
                       </span>
@@ -609,12 +675,20 @@ export default function MenuCustomer() {
                 {/* Preparation Time and Chef Recommendation */}
                 <div className="flex flex-wrap gap-1 mb-3">
                   {item.preparation_time && (
-                    <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      isUnavailable
+                        ? 'bg-gray-200 text-gray-500'
+                        : 'bg-orange-100 text-orange-800'
+                    }`}>
                       {item.preparation_time} min prep
                     </span>
                   )}
                   {item.chef_recommendation && (
-                    <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      isUnavailable
+                        ? 'bg-gray-200 text-gray-500'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
                       Chef's Choice
                     </span>
                   )}
@@ -622,12 +696,17 @@ export default function MenuCustomer() {
                 <div className="flex flex-col space-y-2">
                   <button 
                     onClick={() => handleQuickAdd(item)}
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                    disabled={isUnavailable}
+                    className={`w-full py-2 px-4 rounded-md transition-colors ${
+                      isUnavailable
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
                   >
-                    Quick Add
+                    {isUnavailable ? 'Not Available' : 'Quick Add'}
                   </button>
                   <button
-                    onClick={() => navigate(`/menu/item/${item.id}`)}
+                    onClick={() => handleViewDetails(item)}
                     className="w-full bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition-colors"
                   >
                     View Details
@@ -635,7 +714,8 @@ export default function MenuCustomer() {
                 </div>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
 
         {displayItems.length === 0 && (
