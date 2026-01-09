@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { apiClient as api } from '../config/api';
+import { CheckCircle, XCircle } from 'lucide-react';
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
@@ -59,7 +60,9 @@ export default function VerifyEmail() {
 
           {status === 'success' && (
             <>
-              <div className="mx-auto h-12 w-12 text-green-500 text-5xl">✓</div>
+              <div className="mx-auto flex items-center justify-center">
+                <CheckCircle className="w-12 h-12 text-green-500" />
+              </div>
               <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
                 Email Verified!
               </h2>
@@ -78,7 +81,9 @@ export default function VerifyEmail() {
 
           {status === 'error' && (
             <>
-              <div className="mx-auto h-12 w-12 text-red-500 text-5xl">✗</div>
+              <div className="mx-auto flex items-center justify-center">
+                <XCircle className="w-12 h-12 text-red-500" />
+              </div>
               <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
                 Verification Failed
               </h2>

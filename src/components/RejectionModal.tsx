@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Loader2, Package, ChefHat, Salad, Settings, Users, Edit3 } from 'lucide-react';
+import { X, Loader2, Package, ChefHat, Salad, Settings, Users, Edit3, AlertTriangle } from 'lucide-react';
 
 interface RejectionModalProps {
   isOpen: boolean;
@@ -73,7 +73,7 @@ export default function RejectionModal({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                <span className="text-2xl">⚠️</span>
+                <AlertTriangle className="w-6 h-6" />
               </div>
               <div>
                 <h2 className="text-xl font-bold">Reject Order</h2>
@@ -170,7 +170,7 @@ export default function RejectionModal({
           {/* Warning Message */}
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
             <div className="flex items-start gap-2">
-              <span className="text-yellow-600 mt-0.5">⚠️</span>
+              <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-yellow-800">
                 This action will reject the order and notify the customer. This cannot be undone.
               </p>

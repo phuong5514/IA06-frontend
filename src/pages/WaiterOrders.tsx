@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import DashboardLayout from '../components/DashboardLayout';
 import RejectionModal from '../components/RejectionModal';
-import { Bell, Sparkles, Check, CheckCircle, Circle } from 'lucide-react';
+import { Bell, CheckCircle, Check, Circle, List, Utensils, ScrollText, Clock, AlertTriangle, Package } from 'lucide-react';
 
 interface OrderItem {
   id: number;
@@ -380,7 +380,8 @@ export default function WaiterOrders() {
                 }`}
                 title="List View"
               >
-                📋 List
+                <List className="inline w-4 h-4 mr-1" />
+                List
               </button>
               <button
                 onClick={() => setViewMode('table')}
@@ -391,7 +392,8 @@ export default function WaiterOrders() {
                 }`}
                 title="Table View"
               >
-                🍽️ Tables
+                <Utensils className="inline w-4 h-4 mr-1" />
+                Tables
               </button>
               <button
                 onClick={() => {
@@ -405,7 +407,8 @@ export default function WaiterOrders() {
                 }`}
                 title="History View"
               >
-                📜 History
+                <ScrollText className="inline w-4 h-4 mr-1" />
+                History
               </button>
             </div>
           </div>
@@ -447,7 +450,7 @@ export default function WaiterOrders() {
               <div key={tableName} className="bg-white rounded-xl shadow-md border-2 border-gray-200">
                 <div className="bg-indigo-600 text-white px-6 py-4 rounded-t-xl flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">🍽️</span>
+                    <Utensils className="w-6 h-6" />
                     <div>
                       <h3 className="text-xl font-bold">{tableName}</h3>
                       <p className="text-indigo-100 text-sm">{tableOrders.length} order(s)</p>
@@ -493,16 +496,18 @@ export default function WaiterOrders() {
                               <button
                                 onClick={() => handleAcceptOrder(order.id)}
                                 disabled={processingOrders.has(order.id)}
-                                className="flex-1 bg-green-600 text-white py-1.5 px-3 rounded text-xs font-medium hover:bg-green-700 disabled:bg-gray-400"
+                                className="flex-1 bg-green-600 text-white py-1.5 px-3 rounded text-xs font-medium hover:bg-green-700 disabled:bg-gray-400 flex items-center justify-center gap-1"
                               >
-                                ✓ Accept
+                                <Check className="w-3 h-3" />
+                                Accept
                               </button>
                               <button
                                 onClick={() => openRejectionModal(order.id)}
                                 disabled={processingOrders.has(order.id)}
-                                className="flex-1 bg-red-600 text-white py-1.5 px-3 rounded text-xs font-medium hover:bg-red-700 disabled:bg-gray-400"
+                                className="flex-1 bg-red-600 text-white py-1.5 px-3 rounded text-xs font-medium hover:bg-red-700 disabled:bg-gray-400 flex items-center justify-center gap-1"
                               >
-                                ✗ Reject
+                                <Circle className="w-3 h-3" />
+                                Reject
                               </button>
                             </div>
                           )}
@@ -510,9 +515,10 @@ export default function WaiterOrders() {
                             <button
                               onClick={() => handleUpdateStatus(order.id, 'served')}
                               disabled={processingOrders.has(order.id)}
-                              className="w-full bg-indigo-600 text-white py-1.5 px-3 rounded text-xs font-medium hover:bg-indigo-700 disabled:bg-gray-400"
+                              className="w-full bg-indigo-600 text-white py-1.5 px-3 rounded text-xs font-medium hover:bg-indigo-700 disabled:bg-gray-400 flex items-center justify-center gap-1"
                             >
-                              📦 Mark as Served
+                              <Package className="w-3 h-3" />
+                              Mark as Served
                             </button>
                           )}
                           <button
@@ -533,7 +539,10 @@ export default function WaiterOrders() {
           // History View - Completed orders for the day
           <div className="bg-white rounded-xl shadow-md">
             <div className="bg-gray-800 text-white px-6 py-4 rounded-t-xl">
-              <h3 className="text-xl font-bold">📜 Order History - {new Date().toLocaleDateString()}</h3>
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <ScrollText className="w-5 h-5" />
+                Order History - {new Date().toLocaleDateString()}
+              </h3>
               <p className="text-gray-300 text-sm">Completed orders for today</p>
             </div>
             <div className="overflow-x-auto">
@@ -710,9 +719,14 @@ export default function WaiterOrders() {
                         <button
                           onClick={() => handleUpdateStatus(order.id, 'served')}
                           disabled={processingOrders.has(order.id)}
-                          className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                          className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1"
                         >
-                          {processingOrders.has(order.id) ? 'Processing...' : '📦 Mark as Served'}
+                          {processingOrders.has(order.id) ? 'Processing...' : (
+                            <>
+                              <Package className="w-4 h-4" />
+                              Mark as Served
+                            </>
+                          )}
                         </button>
                       )}
 

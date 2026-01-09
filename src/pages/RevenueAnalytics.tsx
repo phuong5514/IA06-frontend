@@ -542,7 +542,13 @@ export default function RevenueAnalytics() {
                         {summaryData.top_revenue_items.map((item, index) => (
                           <tr key={item.menu_item_id} className={index < 3 ? 'bg-yellow-50' : ''}>
                             <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                              {index < 3 && <span className="mr-2">{['🥇', '🥈', '🥉'][index]}</span>}
+                              {index < 3 && (
+                                <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold mr-2 ${
+                                  index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
+                                }`}>
+                                  {index + 1}
+                                </span>
+                              )}
                               {item.menu_item_name}
                             </td>
                             <td className="px-4 py-3 text-sm text-right text-gray-600">{item.total_quantity}</td>
@@ -579,7 +585,13 @@ export default function RevenueAnalytics() {
                         {summaryData.top_popular_items.map((item, index) => (
                           <tr key={item.menu_item_id} className={index < 3 ? 'bg-indigo-50' : ''}>
                             <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                              {index < 3 && <span className="mr-2">{['🥇', '🥈', '🥉'][index]}</span>}
+                              {index < 3 && (
+                                <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold mr-2 ${
+                                  index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
+                                }`}>
+                                  {index + 1}
+                                </span>
+                              )}
                               {item.menu_item_name}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-600">{item.category_name}</td>
@@ -815,7 +827,13 @@ export default function RevenueAnalytics() {
                           {popularData.data.map((item, index) => (
                             <tr key={item.menu_item_id} className={`hover:bg-gray-50 ${index < 3 ? 'bg-yellow-50' : ''}`}>
                               <td className="px-4 py-3 text-sm text-gray-600">
-                                {index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}`}
+                                {index < 3 ? (
+                                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold ${
+                                    index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
+                                  }`}>
+                                    {index + 1}
+                                  </span>
+                                ) : `${index + 1}`}
                               </td>
                               <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.menu_item_name}</td>
                               <td className="px-4 py-3 text-sm text-gray-600">{item.category_name}</td>
