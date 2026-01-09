@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useTableSession } from '../context/TableSessionContext';
 import { apiClient } from '../config/api';
+import { CheckCircle, ShoppingCart, Trash2, Edit } from 'lucide-react';
 
 export default function Cart() {
   const { items, removeItem, updateQuantity, clearCart, getTotalPrice, getItemPrice, tableId } = useCart();
@@ -91,19 +92,7 @@ export default function Cart() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-white rounded-xl shadow-lg p-8 text-center">
             <div className="mb-4">
-              <svg
-                className="w-16 h-16 text-green-500 mx-auto"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Order Confirmed!</h2>
             <p className="text-gray-600">
@@ -121,19 +110,7 @@ export default function Cart() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">Your Cart</h1>
           <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-            <svg
-              className="w-24 h-24 text-gray-400 mx-auto mb-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-              />
-            </svg>
+            <ShoppingCart className="w-24 h-24 text-gray-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Your cart is empty</h2>
             <p className="text-gray-600 mb-6">Add some delicious items to get started!</p>
             <button
@@ -157,7 +134,7 @@ export default function Cart() {
             onClick={() => navigate('/menu/customer')}
             className="text-indigo-600 hover:text-indigo-800 font-medium"
           >
-            Continue Shopping
+            Continue Ordering
           </button>
         </div>
 
@@ -193,14 +170,7 @@ export default function Cart() {
                         className="text-red-600 hover:text-red-800 p-1"
                         title="Remove item"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
 
@@ -212,9 +182,7 @@ export default function Cart() {
                         onClick={() => navigate(`/menu/item/${item.menuItemId}?edit=${item.id}`)}
                         className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
+                        <Edit className="w-4 h-4" />
                         Edit Order
                       </button>
                     </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../config/api';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Home, ChevronRight, X } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
 interface MenuCategory {
@@ -626,17 +627,13 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
                   to="/dashboard"
                   className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-indigo-600"
                 >
-                  <svg className="w-3 h-3 mr-2.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="m19.707 9.293-2-2-7-7a1 1 0 0 0-1.414 0l-7 7-2 2A1 1 0 0 0 1 10h2v8a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-8h2a1 1 0 0 0 .707-1.707Z"/>
-                  </svg>
+                  <Home className="w-3 h-3 mr-2.5" />
                   Dashboard
                 </Link>
               </li>
               <li>
                 <div className="flex items-center">
-                  <svg className="w-3 h-3 text-gray-400 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m9 5 7 7-7 7"/>
-                  </svg>
+                  <ChevronRight className="w-3 h-3 text-gray-400 mx-1" />
                   <Link
                     to="/admin/menu-items"
                     className="ml-1 text-sm font-medium text-gray-700 hover:text-indigo-600 md:ml-2"
@@ -647,9 +644,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
               </li>
               <li aria-current="page">
                 <div className="flex items-center">
-                  <svg className="w-3 h-3 text-gray-400 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m9 5 7 7-7 7"/>
-                  </svg>
+                  <ChevronRight className="w-3 h-3 text-gray-400 mx-1" />
                   <span className="ml-1 text-sm font-medium text-gray-500 md:ml-2">
                     {currentItemId ? 'Edit Item' : 'Create Item'}
                   </span>
@@ -785,9 +780,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
                       className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Delete image"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                 ))}

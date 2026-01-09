@@ -1,4 +1,5 @@
 import React from 'react';
+import { MessageCircle } from 'lucide-react';
 import StarRating from './StarRating';
 
 interface Review {
@@ -86,9 +87,7 @@ export default function ReviewCard({ review, onAdminRespond, isAdmin = false }: 
       {review.admin_response && (
         <div className="mt-4 pl-4 border-l-4 border-indigo-500 bg-indigo-50 rounded-r-lg p-4">
           <div className="flex items-center mb-2">
-            <svg className="w-5 h-5 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
+            <MessageCircle className="w-5 h-5 text-indigo-600 mr-2" />
             <span className="font-semibold text-indigo-900">Restaurant Response</span>
           </div>
           <p className="text-gray-700 whitespace-pre-wrap">{review.admin_response}</p>

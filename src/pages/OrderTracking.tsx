@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import { apiClient } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
+import { Check, CheckCircle, PartyPopper, XCircle, Frown, ChefHat, Utensils, Ban } from 'lucide-react';
+import { ArrowLeft, Star } from 'lucide-react';
 
 interface OrderItem {
   id: number;
@@ -82,27 +84,27 @@ export default function OrderTracking() {
         // Show toast notification based on status
         switch (updatedOrder.status) {
           case 'accepted':
-            toast.success('✅ Your order has been accepted!', {
+            toast.success('Your order has been accepted!', {
               duration: 5000,
-              icon: '🎉',
+              icon: <PartyPopper className="w-5 h-5" />,
             });
             break;
           case 'rejected':
-            toast.error(`❌ Your order has been rejected${updatedOrder.rejection_reason ? `: ${updatedOrder.rejection_reason}` : ''}`, {
+            toast.error(`Your order has been rejected${updatedOrder.rejection_reason ? `: ${updatedOrder.rejection_reason}` : ''}`, {
               duration: 7000,
-              icon: '😔',
+              icon: <Frown className="w-5 h-5" />,
             });
             break;
           case 'preparing':
-            toast.success('👨‍🍳 Your order is being prepared!', {
+            toast.success('Your order is being prepared!', {
               duration: 5000,
-              icon: '🍳',
+              icon: <ChefHat className="w-5 h-5" />,
             });
             break;
           case 'ready':
-            toast.success('🎊 Your order is ready!', {
+            toast.success('Your order is ready!', {
               duration: 6000,
-              icon: '✨',
+              icon: <CheckCircle className="w-5 h-5" />,
               style: {
                 background: '#10b981',
                 color: '#fff',
@@ -110,18 +112,21 @@ export default function OrderTracking() {
             });
             break;
           case 'served':
-            toast.success('🍽️ Your order has been served. Enjoy!', {
+            toast.success('Your order has been served. Enjoy!', {
               duration: 4000,
+              icon: <Utensils className="w-5 h-5" />,
             });
             break;
           case 'completed':
-            toast.success('✓ Order completed. Thank you!', {
+            toast.success('Order completed. Thank you!', {
               duration: 3000,
+              icon: <Check className="w-5 h-5" />,
             });
             break;
           case 'cancelled':
             toast.error('Order has been cancelled', {
               duration: 5000,
+              icon: <Ban className="w-5 h-5" />,
             });
             break;
         }
@@ -316,13 +321,7 @@ export default function OrderTracking() {
                         }`}
                       >
                         {step.completed ? (
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                              fillRule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
+                          <Check className="w-5 h-5" />
                         ) : (
                           <span className="text-sm">{index + 1}</span>
                         )}

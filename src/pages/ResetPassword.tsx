@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { apiClient as api } from '../config/api';
+import { CheckCircle, XCircle } from 'lucide-react';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -94,7 +95,9 @@ export default function ResetPassword() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-md">
           <div className="text-center">
-            <div className="mx-auto h-12 w-12 text-red-500 text-5xl">✗</div>
+            <div className="mx-auto flex items-center justify-center">
+              <XCircle className="w-12 h-12 text-red-500" />
+            </div>
             <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
               Invalid Reset Link
             </h2>
@@ -118,7 +121,9 @@ export default function ResetPassword() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-md">
           <div className="text-center">
-            <div className="mx-auto h-12 w-12 text-green-500 text-5xl">✓</div>
+            <div className="mx-auto flex items-center justify-center">
+              <CheckCircle className="w-12 h-12 text-green-500" />
+            </div>
             <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
               Password Reset Successful!
             </h2>

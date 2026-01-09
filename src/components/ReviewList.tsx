@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { MessageSquare } from 'lucide-react';
 import ReviewCard from './ReviewCard';
 import { apiClient } from '../config/api';
 
@@ -93,19 +94,7 @@ export default function ReviewList({
   if (reviews.length === 0) {
     return (
       <div className="bg-gray-50 rounded-lg p-8 text-center">
-        <svg 
-          className="w-16 h-16 text-gray-400 mx-auto mb-4" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" 
-          />
-        </svg>
+        <MessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
         <p className="text-gray-600 font-medium">No reviews yet</p>
         <p className="text-gray-500 text-sm mt-1">Be the first to review this item!</p>
       </div>

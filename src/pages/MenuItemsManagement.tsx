@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../config/api';
 import { useNavigate, Link } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, Home, ChevronRight, ChevronLeft, ChevronDown } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import StarRating from '../components/StarRating';
 import ReviewManagementModal from '../components/ReviewManagementModal';
@@ -153,17 +153,13 @@ export default function MenuItemsManagement() {
                   to="/dashboard"
                   className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-indigo-600"
                 >
-                  <svg className="w-3 h-3 mr-2.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="m19.707 9.293-2-2-7-7a1 1 0 0 0-1.414 0l-7 7-2 2A1 1 0 0 0 1 10h2v8a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-8h2a1 1 0 0 0 .707-1.707Z"/>
-                  </svg>
+                  <Home className="w-3 h-3 mr-2.5" />
                   Dashboard
                 </Link>
               </li>
               <li>
                 <div className="flex items-center">
-                  <svg className="w-3 h-3 text-gray-400 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m9 5 7 7-7 7"/>
-                  </svg>
+                  <ChevronRight className="w-3 h-3 text-gray-400 mx-1" />
                   <span className="ml-1 text-sm font-medium text-gray-500 md:ml-2">Menu Items</span>
                 </div>
               </li>

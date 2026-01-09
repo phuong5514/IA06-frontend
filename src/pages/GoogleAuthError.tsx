@@ -1,5 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { FcGoogle } from 'react-icons/fc';
+import { X } from 'lucide-react';
 
 export default function GoogleAuthError() {
   const [searchParams] = useSearchParams();
@@ -28,19 +29,7 @@ export default function GoogleAuthError() {
           <div className="relative">
             <FcGoogle className="w-16 h-16" />
             <div className="absolute -bottom-1 -right-1 bg-red-500 rounded-full p-1">
-              <svg
-                className="w-4 h-4 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <X className="w-4 h-4 text-white" />
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { X, Loader2, Package, ChefHat, Salad, Settings, Users, Edit3, AlertTriangle } from 'lucide-react';
 
 interface RejectionModalProps {
   isOpen: boolean;
@@ -12,12 +13,12 @@ interface RejectionModalProps {
 }
 
 const REJECTION_REASONS = [
-  { value: 'out_of_stock', label: 'Out of Stock', icon: '📦' },
-  { value: 'kitchen_capacity', label: 'Kitchen at Capacity', icon: '👨‍🍳' },
-  { value: 'ingredient_unavailable', label: 'Ingredient Unavailable', icon: '🥗' },
-  { value: 'equipment_issue', label: 'Equipment Issue', icon: '⚙️' },
-  { value: 'staff_shortage', label: 'Staff Shortage', icon: '👥' },
-  { value: 'custom', label: 'Other (Custom Reason)', icon: '✏️' },
+  { value: 'out_of_stock', label: 'Out of Stock', icon: <Package className="w-5 h-5" /> },
+  { value: 'kitchen_capacity', label: 'Kitchen at Capacity', icon: <ChefHat className="w-5 h-5" /> },
+  { value: 'ingredient_unavailable', label: 'Ingredient Unavailable', icon: <Salad className="w-5 h-5" /> },
+  { value: 'equipment_issue', label: 'Equipment Issue', icon: <Settings className="w-5 h-5" /> },
+  { value: 'staff_shortage', label: 'Staff Shortage', icon: <Users className="w-5 h-5" /> },
+  { value: 'custom', label: 'Other (Custom Reason)', icon: <Edit3 className="w-5 h-5" /> },
 ];
 
 export default function RejectionModal({
@@ -72,7 +73,7 @@ export default function RejectionModal({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                <span className="text-2xl">⚠️</span>
+                <AlertTriangle className="w-6 h-6" />
               </div>
               <div>
                 <h2 className="text-xl font-bold">Reject Order</h2>
@@ -84,9 +85,7 @@ export default function RejectionModal({
               disabled={isSubmitting}
               className="text-white/80 hover:text-white transition-colors disabled:opacity-50"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X className="w-6 h-6" />
             </button>
           </div>
         </div>
@@ -171,7 +170,7 @@ export default function RejectionModal({
           {/* Warning Message */}
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
             <div className="flex items-start gap-2">
-              <span className="text-yellow-600 mt-0.5">⚠️</span>
+              <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-yellow-800">
                 This action will reject the order and notify the customer. This cannot be undone.
               </p>
@@ -199,10 +198,7 @@ export default function RejectionModal({
           >
             {isSubmitting ? (
               <>
-                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
+                <Loader2 className="animate-spin h-5 w-5" />
                 <span>Rejecting...</span>
               </>
             ) : (

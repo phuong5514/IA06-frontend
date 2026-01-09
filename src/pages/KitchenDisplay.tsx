@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../context/WebSocketContext';
 import { useSettings } from '../context/SettingsContext';
 import DashboardLayout from '../components/DashboardLayout';
+import { Sparkles, ClipboardList, Bell, ChefHat, CheckCircle, Flame, Utensils, Clock, AlertTriangle, Lightbulb, AlertCircle, FileEdit } from 'lucide-react';
 
 interface OrderItem {
   id: number;
@@ -132,7 +133,7 @@ export default function KitchenDisplay() {
         audioRef.current.play().catch(e => console.log('Audio play failed:', e));
       }
       // Flash notification
-      document.title = '🔔 NEW ORDER - Kitchen Display';
+      document.title = 'NEW ORDER - Kitchen Display';
       setTimeout(() => {
         document.title = 'Kitchen Display System';
       }, 3000);
@@ -163,9 +164,9 @@ export default function KitchenDisplay() {
       
       // Only show "new order" toast for pending orders (not yet accepted)
       if (order.status === 'pending') {
-        toast.success(`🆕 New Order #${order.id} - Waiting for waiter`, {
+        toast.success(`New Order #${order.id} - Waiting for waiter`, {
           duration: 5000,
-          icon: '📋',
+          icon: <ClipboardList className="w-5 h-5" />,
         });
       }
       
@@ -178,8 +179,9 @@ export default function KitchenDisplay() {
       
       // Show toast for ready status
       if (order.status === 'ready') {
-        toast.success(`✅ Order #${order.id} marked as ready!`, {
+        toast.success(`Order #${order.id} marked as ready!`, {
           duration: 3000,
+          icon: <CheckCircle className="w-5 h-5" />,
         });
       }
       
@@ -193,9 +195,9 @@ export default function KitchenDisplay() {
       if (audioRef.current) {
         audioRef.current.play().catch(e => console.log('Audio play failed:', e));
       }
-      toast.success(`🔔 Order #${order.id} ready to prepare!`, {
+      toast.success(`Order #${order.id} ready to prepare!`, {
         duration: 5000,
-        icon: '🍳',
+        icon: <ChefHat className="w-5 h-5" />,
         style: {
           background: '#10b981',
           color: '#fff',
@@ -381,9 +383,9 @@ export default function KitchenDisplay() {
         {/* Status Filter Tabs */}
         <div className="mb-6 flex space-x-2 bg-white rounded-lg p-2 shadow-sm">
           {[
-            { value: 'accepted', label: 'New Orders', icon: '🆕' },
-            { value: 'preparing', label: 'Preparing', icon: '🔥' },
-            { value: 'ready', label: 'Ready', icon: '✅' },
+            { value: 'accepted', label: 'New Orders', icon: <Sparkles className="w-5 h-5 inline" /> },
+            { value: 'preparing', label: 'Preparing', icon: <Flame className="w-5 h-5 inline" /> },
+            { value: 'ready', label: 'Ready', icon: <CheckCircle className="w-5 h-5 inline" /> },
           ].map((tab) => (
             <button
               key={tab.value}
@@ -414,10 +416,10 @@ export default function KitchenDisplay() {
         }).length > 0 && (
           <div className="mb-6">
             <div className="bg-red-50 border-2 border-red-500 rounded-lg p-4 mb-4">
-              <h2 className="text-2xl font-bold text-red-800 mb-4 flex items-center">
-                <span className="animate-pulse mr-2">🚨</span>
+              <h2 className="text-2xl font-bold text-red-800 mb-4 flex items-center gap-2">
+                <AlertCircle className="w-6 h-6 animate-pulse text-red-600" />
                 RUSH ORDERS - URGENT
-                <span className="animate-pulse ml-2">🚨</span>
+                <AlertCircle className="w-6 h-6 animate-pulse text-red-600" />
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {orders
@@ -523,7 +525,8 @@ export default function KitchenDisplay() {
                           </h3>
                           {order.table_id && (
                             <span className="px-3 py-1 bg-blue-600 text-white rounded-full font-bold text-lg">
-                              🍽️ Table {order.table_id}
+                              <Utensils className="inline w-4 h-4 mr-1" />
+                              Table {order.table_id}
                             </span>
                           )}
                         </div>
@@ -557,8 +560,18 @@ export default function KitchenDisplay() {
                             </div>
                             <div className="text-xs text-gray-600">
                               Alert at: {workflow.kitchenPreparationAlertTime || 15} min 
-                              {isUrgent && ' ⚠️ OVERDUE'}
-                              {isWarning && ' ⏰ WARNING'}
+                              {isUrgent && (
+                                <>
+                                  <AlertTriangle className="inline w-4 h-4 ml-2 mr-1" />
+                                  OVERDUE
+                                </>
+                              )}
+                              {isWarning && (
+                                <>
+                                  <Clock className="inline w-4 h-4 ml-2 mr-1" />
+                                  WARNING
+                                </>
+                              )}
                             </div>
                           </div>
                           <div className="text-right">
@@ -588,9 +601,10 @@ export default function KitchenDisplay() {
                         {order.status === 'preparing' && (
                           <button
                             onClick={() => markAllItemsReady(order.id, order.items)}
-                            className="text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                            className="text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 flex items-center gap-1"
                           >
-                            ✓ All Ready
+                            <CheckCircle className="w-3 h-3" />
+                            All Ready
                           </button>
                         )}
                       </div>
@@ -613,9 +627,9 @@ export default function KitchenDisplay() {
                                 <div className="flex items-start gap-2 flex-1">
                                   <div className="flex-shrink-0 mt-1">
                                     {itemStatus === 'ready' ? (
-                                      <span className="text-green-600 text-xl">✓</span>
+                                      <CheckCircle className="w-5 h-5 text-green-600" />
                                     ) : itemStatus === 'preparing' ? (
-                                      <span className="text-yellow-600 text-xl">🔥</span>
+                                      <Flame className="w-5 h-5 text-yellow-600" />
                                     ) : (
                                       <span className="text-gray-400 text-xl">○</span>
                                     )}
@@ -627,8 +641,9 @@ export default function KitchenDisplay() {
                                       {item.quantity}x {item.menu_item_name}
                                     </span>
                                     {item.preparation_time && (
-                                      <div className="text-xs text-gray-600 mt-1">
-                                        ⏱️ {item.preparation_time} min prep
+                                      <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        {item.preparation_time} min prep
                                       </div>
                                     )}
                                   </div>
@@ -663,7 +678,10 @@ export default function KitchenDisplay() {
                               {/* Special Instructions */}
                               {item.special_instructions && (
                                 <div className="mt-2 ml-7 p-2 bg-yellow-100 rounded border border-yellow-300">
-                                  <p className="text-xs font-bold text-yellow-900">📝 Special Note:</p>
+                                  <p className="text-xs font-bold text-yellow-900 flex items-center gap-1">
+                                    <FileEdit className="w-3 h-3" />
+                                    Special Note:
+                                  </p>
                                   <p className="text-xs text-yellow-900">{item.special_instructions}</p>
                                 </div>
                               )}
@@ -671,8 +689,9 @@ export default function KitchenDisplay() {
                           );
                         })}
                       </div>
-                      <p className="text-xs text-gray-500 mt-2 italic">
-                        💡 Click items to update status
+                      <p className="text-xs text-gray-500 mt-2 italic flex items-center gap-1">
+                        <Lightbulb className="w-3 h-3" />
+                        Click items to update status
                       </p>
                     </div>
 
@@ -684,7 +703,12 @@ export default function KitchenDisplay() {
                           disabled={processingOrders.has(order.id)}
                           className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-bold text-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                         >
-                          {processingOrders.has(order.id) ? 'Processing...' : '🔥 Start Preparing'}
+                          {processingOrders.has(order.id) ? 'Processing...' : (
+                            <>
+                              <Flame className="inline w-5 h-5 mr-1" />
+                              Start Preparing
+                            </>
+                          )}
                         </button>
                       )}
 
@@ -700,7 +724,17 @@ export default function KitchenDisplay() {
                             }`}
                           >
                             {processingOrders.has(order.id) ? 'Processing...' : 
-                             allItemsReady ? '✅ Mark Order Ready' : '⚠️ Complete All Items First'}
+                             allItemsReady ? (
+                              <>
+                                <CheckCircle className="inline w-4 h-4 mr-1" />
+                                Mark Order Ready
+                              </>
+                            ) : (
+                              <>
+                                <AlertTriangle className="inline w-4 h-4 mr-1" />
+                                Complete All Items First
+                              </>
+                            )}
                           </button>
                           {!allItemsReady && (
                             <p className="text-xs text-center text-red-600">

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../config/api';
 import DashboardLayout from '../components/DashboardLayout';
-import { TrendingUp, DollarSign, ShoppingBag, Calendar, Award } from 'lucide-react';
+import { TrendingUp, DollarSign, ShoppingBag, Calendar, Award, BarChart3, Utensils, Armchair, Activity, Star, CalendarDays, BarChart2, ClipboardList } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 
 interface RevenueByMenuItem {
@@ -463,53 +463,58 @@ export default function RevenueAnalytics() {
             <div className="flex flex-wrap">
               <button
                 onClick={() => setActiveTab('summary')}
-                className={`px-6 py-4 font-medium transition-colors ${
+                className={`px-6 py-4 font-medium transition-colors flex items-center gap-2 ${
                   activeTab === 'summary'
                     ? 'border-b-2 border-indigo-600 text-indigo-600'
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
-                📊 Summary
+                <BarChart3 className="w-5 h-5" />
+                Summary
               </button>
               <button
                 onClick={() => setActiveTab('menu-items')}
-                className={`px-6 py-4 font-medium transition-colors ${
+                className={`px-6 py-4 font-medium transition-colors flex items-center gap-2 ${
                   activeTab === 'menu-items'
                     ? 'border-b-2 border-indigo-600 text-indigo-600'
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
-                🍽️ By Menu Items
+                <Utensils className="w-5 h-5" />
+                By Menu Items
               </button>
               <button
                 onClick={() => setActiveTab('tables')}
-                className={`px-6 py-4 font-medium transition-colors ${
+                className={`px-6 py-4 font-medium transition-colors flex items-center gap-2 ${
                   activeTab === 'tables'
                     ? 'border-b-2 border-indigo-600 text-indigo-600'
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
-                🪑 By Tables
+                <Armchair className="w-5 h-5" />
+                By Tables
               </button>
               <button
                 onClick={() => setActiveTab('daily')}
-                className={`px-6 py-4 font-medium transition-colors ${
+                className={`px-6 py-4 font-medium transition-colors flex items-center gap-2 ${
                   activeTab === 'daily'
                     ? 'border-b-2 border-indigo-600 text-indigo-600'
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
-                📈 Daily Activity
+                <Activity className="w-5 h-5" />
+                Daily Activity
               </button>
               <button
                 onClick={() => setActiveTab('popular')}
-                className={`px-6 py-4 font-medium transition-colors ${
+                className={`px-6 py-4 font-medium transition-colors flex items-center gap-2 ${
                   activeTab === 'popular'
                     ? 'border-b-2 border-indigo-600 text-indigo-600'
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
-                ⭐ Popular Items
+                <Star className="w-5 h-5" />
+                Popular Items
               </button>
             </div>
           </div>
@@ -537,7 +542,13 @@ export default function RevenueAnalytics() {
                         {summaryData.top_revenue_items.map((item, index) => (
                           <tr key={item.menu_item_id} className={index < 3 ? 'bg-yellow-50' : ''}>
                             <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                              {index < 3 && <span className="mr-2">{['🥇', '🥈', '🥉'][index]}</span>}
+                              {index < 3 && (
+                                <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold mr-2 ${
+                                  index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
+                                }`}>
+                                  {index + 1}
+                                </span>
+                              )}
                               {item.menu_item_name}
                             </td>
                             <td className="px-4 py-3 text-sm text-right text-gray-600">{item.total_quantity}</td>
@@ -574,7 +585,13 @@ export default function RevenueAnalytics() {
                         {summaryData.top_popular_items.map((item, index) => (
                           <tr key={item.menu_item_id} className={index < 3 ? 'bg-indigo-50' : ''}>
                             <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                              {index < 3 && <span className="mr-2">{['🥇', '🥈', '🥉'][index]}</span>}
+                              {index < 3 && (
+                                <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold mr-2 ${
+                                  index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
+                                }`}>
+                                  {index + 1}
+                                </span>
+                              )}
                               {item.menu_item_name}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-600">{item.category_name}</td>
@@ -692,23 +709,25 @@ export default function RevenueAnalytics() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => setViewMode('daily')}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                         viewMode === 'daily'
                           ? 'bg-blue-600 text-white'
                           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                     >
-                      📅 Daily View
+                      <CalendarDays className="w-5 h-5" />
+                      Daily View
                     </button>
                     <button
                       onClick={() => setViewMode('hourly')}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                         viewMode === 'hourly'
                           ? 'bg-blue-600 text-white'
                           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                     >
-                      📊 Hourly View
+                      <BarChart2 className="w-5 h-5" />
+                      Hourly View
                     </button>
                   </div>
                 </div>
@@ -736,7 +755,10 @@ export default function RevenueAnalytics() {
 
                     {/* Daily Table */}
                     <div>
-                      <h4 className="text-md font-semibold text-gray-700 mb-3">📋 Daily Summary Table</h4>
+                      <h4 className="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <ClipboardList className="w-5 h-5" />
+                        Daily Summary Table
+                      </h4>
                       <div className="overflow-x-auto">
                         <table className="w-full">
                           <thead className="bg-gray-50">
@@ -805,7 +827,13 @@ export default function RevenueAnalytics() {
                           {popularData.data.map((item, index) => (
                             <tr key={item.menu_item_id} className={`hover:bg-gray-50 ${index < 3 ? 'bg-yellow-50' : ''}`}>
                               <td className="px-4 py-3 text-sm text-gray-600">
-                                {index < 3 ? ['🥇', '🥈', '🥉'][index] : `${index + 1}`}
+                                {index < 3 ? (
+                                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold ${
+                                    index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-amber-600'
+                                  }`}>
+                                    {index + 1}
+                                  </span>
+                                ) : `${index + 1}`}
                               </td>
                               <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.menu_item_name}</td>
                               <td className="px-4 py-3 text-sm text-gray-600">{item.category_name}</td>

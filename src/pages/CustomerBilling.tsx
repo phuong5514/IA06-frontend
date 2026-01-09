@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { CreditCard, Banknote, Receipt, ArrowLeft, Loader2, Cross } from 'lucide-react';
+import { CreditCard, Banknote, Receipt, ArrowLeft, Loader2, Cross, AlertCircle } from 'lucide-react';
 import { apiClient } from '../config/api';
-import DashboardLayout from '../components/DashboardLayout';
+// import DashboardLayout from '../components/DashboardLayout';
 
 // Initialize Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
@@ -201,34 +201,34 @@ const CustomerBilling = () => {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        </div>
-      </DashboardLayout>
+      // <DashboardLayout>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+      // </DashboardLayout>
     );
   }
 
   if (!billingInfo || billingInfo.orders.length === 0) {
     return (
-      <DashboardLayout>
-        <div className="min-h-screen bg-gray-50 p-4">
-          <div className="max-w-2xl mx-auto">
-            <button
-              onClick={() => navigate('/orders')}
-              className="mb-4 flex items-center text-gray-600 hover:text-gray-900"
-            >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back to Orders
-            </button>
-            <div className="bg-white rounded-lg shadow-md p-8 text-center">
-              <Receipt className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">No Bills to Pay</h2>
-              <p className="text-gray-600">You don't have any delivered orders to pay for.</p>
-            </div>
+      // <DashboardLayout>
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-2xl mx-auto">
+          <button
+            onClick={() => navigate('/orders')}
+            className="mb-4 flex items-center text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Back to Orders
+          </button>
+          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+            <Receipt className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">No Bills to Pay</h2>
+            <p className="text-gray-600">You don't have any delivered orders to pay for.</p>
           </div>
         </div>
-      </DashboardLayout>
+      </div>
+      // </DashboardLayout>
     );
   }
 
@@ -256,9 +256,8 @@ const CustomerBilling = () => {
   }
 
   return (
-    <DashboardLayout>
-      <div className="min-h-screen bg-gray-50 p-4">
-        <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-4xl mx-auto">
         <button
           onClick={() => navigate('/orders')}
           className="mb-4 flex items-center text-gray-600 hover:text-gray-900"
@@ -273,9 +272,7 @@ const CustomerBilling = () => {
             <div className="bg-red-50 border-l-4 border-red-500 p-6 mb-6">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <AlertCircle className="w-6 h-6 text-red-500" />
                 </div>
                 <div className="ml-3 flex-1">
                   <h3 className="text-lg font-semibold text-red-800 mb-2">Payment Failed</h3>
@@ -383,6 +380,36 @@ const CustomerBilling = () => {
             <div className="mt-8 pt-6 border-t">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Payment Method</h3>
               
+              {/* Cash Payment - Always Available */}
+              <div className="mb-6">
+                <button
+                  onClick={() => {
+                    setPaymentMethod('cash');
+                    setSelectedCard(null);
+                  }}
+                  className={`w-full p-4 border-2 rounded-lg flex items-center transition-all ${
+                    paymentMethod === 'cash'
+                      ? 'border-blue-600 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Banknote className={`w-6 h-6 mr-3 ${
+                    paymentMethod === 'cash' ? 'text-blue-600' : 'text-gray-400'
+                  }`} />
+                  <div className="text-left">
+                    <p className="font-semibold text-gray-800">Cash Payment</p>
+                    <p className="text-sm text-gray-600">Pay at the counter</p>
+                  </div>
+                  {paymentMethod === 'cash' && (
+                    <div className="ml-auto w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              </div>
+
               {/* Saved Cards Section */}
               {savedCards.length > 0 && !useNewCard && (
                 <div className="mb-6">
@@ -431,19 +458,20 @@ const CustomerBilling = () => {
                   </div>
                   <button
                     onClick={() => {
-                      setShowAddCardModal(true);
+                      setUseNewCard(true);
+                      setSelectedCard(null);
                     }}
                     className="mt-3 text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center"
                   >
-                    <Cross className="w-4 h-4 mr-1" />
+                    <CreditCard className="w-4 h-4 mr-1" />
                     Use a different card
                   </button>
                 </div>
               )}
 
-              {/* Payment Method Options */}
+              {/* New Card Option */}
               {(savedCards.length === 0 || useNewCard) && (
-                <>
+                <div className="mb-6">
                   {savedCards.length > 0 && (
                     <button
                       onClick={() => {
@@ -460,67 +488,23 @@ const CustomerBilling = () => {
                       Back to saved cards
                     </button>
                   )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button
-                      onClick={() => {
-                        setPaymentMethod('cash');
-                        setSelectedCard(null);
-                      }}
-                      className={`p-4 border-2 rounded-lg flex items-center justify-center transition-all ${
-                        paymentMethod === 'cash'
-                          ? 'border-blue-600 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <Banknote className={`w-6 h-6 mr-3 ${
-                        paymentMethod === 'cash' ? 'text-blue-600' : 'text-gray-400'
-                      }`} />
-                      <div className="text-left">
-                        <p className="font-semibold text-gray-800">Cash Payment</p>
-                        <p className="text-sm text-gray-600">Pay at the counter</p>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setPaymentMethod('stripe');
-                        setSelectedCard(null);
-                      }}
-                      className={`p-4 border-2 rounded-lg flex items-center justify-center transition-all ${
-                        paymentMethod === 'stripe' && !selectedCard
-                          ? 'border-blue-600 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <CreditCard className={`w-6 h-6 mr-3 ${
-                        paymentMethod === 'stripe' && !selectedCard ? 'text-blue-600' : 'text-gray-400'
-                      }`} />
-                      <div className="text-left">
-                        <p className="font-semibold text-gray-800">New Card</p>
-                        <p className="text-sm text-gray-600">Pay online with Stripe</p>
-                      </div>
-                    </button>
-                  </div>
-                </>
+                  <h4 className="text-md font-medium text-gray-700 mb-3">
+                    {savedCards.length === 0 ? 'Card Payment' : 'New Card'}
+                  </h4>
+                  <button
+                    onClick={() => {
+                      setShowAddCardModal(true);
+                    }}
+                    className="w-full p-4 border-2 rounded-lg flex items-center border-gray-200 hover:border-gray-300 transition-all"
+                  >
+                    <CreditCard className="w-6 h-6 mr-3 text-gray-400" />
+                    <div className="text-left">
+                      <p className="font-semibold text-gray-800">Add New Card</p>
+                      <p className="text-sm text-gray-600">Pay online with Stripe</p>
+                    </div>
+                  </button>
+                </div>
               )}
-            </div>
-              <div
-                className={`p-4 border-2 rounded-lg flex items-center justify-center transition-all ${
-                  paymentMethod === 'stripe'
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <button>
-                  <CreditCard className={`w-6 h-6 mr-3 ${
-                    paymentMethod === 'stripe' ? 'text-blue-600' : 'text-gray-400'
-                  }`} />
-                  <div className="text-left">
-                    <p className="font-semibold text-gray-800">Card Payment</p>
-                    <p className="text-sm text-gray-600">Pay online with Stripe</p>
-                  </div>
-                </button>
-              </div>
             </div>
 
             {/* Total and Pay Button */}
@@ -576,7 +560,7 @@ const CustomerBilling = () => {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </div>
   );
 };
 

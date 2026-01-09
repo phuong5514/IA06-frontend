@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
+import { apiClient } from '../config/api';
+import { useQuery } from '@tanstack/react-query';
+import { BookOpen, ShoppingCart, Receipt, ClipboardList, LogIn, UserPlus, LayoutDashboard, Clock, LogOut, Mail, Menu, X } from 'lucide-react';
 import logo from '../assets/logo.png';
 
 
@@ -15,6 +18,7 @@ type HeaderProps = {
 
 function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [hasUnpaidOrders, setHasUnpaidOrders] = useState(false);
   const { user, logout, isAuthenticated } = useAuth();
   const { getTotalItems } = useCart();
   const { branding } = useSettings();
@@ -61,6 +65,45 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
     setIsMenuOpen(false);
   };
 
+  const goToBilling = () => {
+    navigate('/billing')
+    setIsMenuOpen(false);
+  }
+
+  // Fetch user profile data
+  const { data: profileData } = useQuery({
+    queryKey: ['user', 'profile'],
+    queryFn: async () => {
+      const response = await apiClient.get('/user/me');
+      return response.data;
+    },
+    enabled: isAuthenticated,
+  });
+
+  // Fetch unpaid orders status
+  useEffect(() => {
+    const fetchUnpaidOrders = async () => {
+      if (!isAuthenticated) {
+        setHasUnpaidOrders(false);
+        return;
+      }
+      
+      try {
+        const response = await apiClient.get('/payments/billing');
+        const hasUnpaid = response.data.orders && response.data.orders.length > 0;
+        setHasUnpaidOrders(hasUnpaid);
+      } catch (error) {
+        console.error('Error fetching billing info:', error);
+        setHasUnpaidOrders(false);
+      }
+    };
+
+    fetchUnpaidOrders();
+    // Refresh every 30 seconds to keep it updated
+    const interval = setInterval(fetchUnpaidOrders, 30000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
   // Don't show header on dashboard pages (they have their own layout), home page, or for staff roles
   if (
     location.pathname.startsWith('/dashboard') || 
@@ -102,27 +145,22 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
           <nav className="hidden md:flex items-center space-x-4">
             <button
               onClick={goToMenu}
-              className="px-4 py-2 text-gray-700 hover:text-primary font-medium transition"
+              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-primary font-medium transition"
               style={{ '--hover-color': branding.primaryColor } as React.CSSProperties}
               onMouseEnter={(e) => e.currentTarget.style.color = branding.primaryColor}
               onMouseLeave={(e) => e.currentTarget.style.color = ''}
             >
-              Menu
+              <BookOpen className="w-5 h-5" />
+              <span>Menu</span>
             </button>
             {isAuthenticated && (
               <button
                 onClick={goToCart}
-                className="relative px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+                className="relative flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
                 title="View Cart"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
+                <ShoppingCart className="w-5 h-5" />
+                <span>Cart</span>
                 {getTotalItems() > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                     {getTotalItems()}
@@ -130,63 +168,97 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
                 )}
               </button>
             )}
+
+            {isAuthenticated && (
+              <button
+                onClick={goToBilling}
+                className="relative flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+                title="View Billing"
+              >
+                <Receipt className="w-5 h-5" />
+                <span>Billing</span>
+                {hasUnpaidOrders && (
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    !
+                  </span>
+                )}
+              </button>  
+            )}
+
             {isAuthenticated && (
               <button
                 onClick={goToOrders}
-                className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
               >
-                My Orders
+                <ClipboardList className="w-5 h-5" />
+                <span>My Orders</span>
               </button>
             )}
             {!isAuthenticated && showAuthButtons ? (
               <>
                 <button
                   onClick={onOpenSignIn}
-                  className="px-4 py-2 text-gray-700 font-medium transition"
+                  className="flex items-center gap-2 px-4 py-2 text-gray-700 font-medium transition"
                   onMouseEnter={(e) => e.currentTarget.style.color = branding.primaryColor}
                   onMouseLeave={(e) => e.currentTarget.style.color = ''}
                 >
-                  Sign In
+                  <LogIn className="w-5 h-5" />
+                  <span>Sign In</span>
                 </button>
                 <button
                   onClick={onOpenSignUp}
-                  className="px-4 py-2 text-white rounded-lg font-medium transition"
+                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium transition"
                   style={{ backgroundColor: branding.primaryColor }}
                   onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
                   onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                 >
-                  Sign Up
+                  <UserPlus className="w-5 h-5" />
+                  <span>Sign Up</span>
                 </button>
               </>
             ) : isAuthenticated ? (
               <>
                 <button
                   onClick={goToProfile}
-                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+                  className="flex items-center gap-2 px-2 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+                  title="View Profile"
                 >
-                  Welcome, {user?.email}
+                  {profileData?.user?.profile_image_url ? (
+                    <img
+                      src={profileData.user.profile_image_url}
+                      alt="Profile"
+                      className="w-8 h-8 rounded-full object-cover border-2 border-gray-300 hover:border-indigo-600 transition-colors"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold border-2 border-gray-300 hover:border-indigo-600 transition-colors">
+                      {user?.email?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </button>
                 {(user?.role === 'admin' || user?.role === 'super_admin') && (
                   <button
                     onClick={goToDashboard}
-                    className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+                    className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
                   >
-                    Dashboard
+                    <LayoutDashboard className="w-5 h-5" />
+                    <span>Dashboard</span>
                   </button>
                 )}
                 {(user?.role === 'waiter' || user?.role === 'admin' || user?.role === 'super_admin') && (
                   <button
                     onClick={() => { navigate('/waiter/orders'); setIsMenuOpen(false); }}
-                    className="px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+                    className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
                   >
-                    🍽️ Orders
+                    <Clock className="w-5 h-5" />
+                    <span>Orders</span>
                   </button>
                 )}
                 <button
                   onClick={handleLogout}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition"
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition"
                 >
-                  Sign Out
+                  <LogOut className="w-5 h-5" />
+                  <span>Sign Out</span>
                 </button>
               </>
             ) : null}
@@ -198,28 +270,11 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
             className="md:hidden p-2 text-gray-700 hover:text-indigo-600 focus:outline-none"
             aria-label="Toggle menu"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              {isMenuOpen ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              )}
-            </svg>
+            {isMenuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
           </button>
         </div>
 
@@ -228,16 +283,20 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
           <div className="md:hidden border-t border-gray-200 py-4 space-y-2">
             <button
               onClick={goToMenu}
-              className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+              className="flex items-center gap-2 w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
             >
-              Menu
+              <BookOpen className="w-5 h-5" />
+              <span>Menu</span>
             </button>
             {isAuthenticated && (
               <button
                 onClick={goToCart}
-                className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition flex items-center justify-between"
+                className="flex items-center justify-between w-full px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
               >
-                <span>Cart</span>
+                <div className="flex items-center gap-2">
+                  <ShoppingCart className="w-5 h-5" />
+                  <span>Cart</span>
+                </div>
                 {getTotalItems() > 0 && (
                   <span className="bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                     {getTotalItems()}
@@ -247,10 +306,27 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
             )}
             {isAuthenticated && (
               <button
-                onClick={goToOrders}
-                className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+                onClick={goToBilling}
+                className="flex items-center justify-between w-full px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
               >
-                My Orders
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-5 h-5" />
+                  <span>Billing</span>
+                </div>
+                {hasUnpaidOrders && (
+                  <span className="bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    !
+                  </span>
+                )}
+              </button>
+            )}
+            {isAuthenticated && (
+              <button
+                onClick={goToOrders}
+                className="flex items-center gap-2 w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+              >
+                <ClipboardList className="w-5 h-5" />
+                <span>My Orders</span>
               </button>
             )}
             {!isAuthenticated && showAuthButtons ? (
@@ -260,50 +336,60 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
                     onOpenSignIn?.();
                     setIsMenuOpen(false);
                   }}
-                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+                  className="flex items-center gap-2 w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
                 >
-                  Sign In
+                  <LogIn className="w-5 h-5" />
+                  <span>Sign In</span>
                 </button>
                 <button
                   onClick={() => {
                     onOpenSignUp?.();
                     setIsMenuOpen(false);
                   }}
-                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+                  className="flex items-center gap-2 w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
                 >
-                  Sign Up
+                  <UserPlus className="w-5 h-5" />
+                  <span>Sign Up</span>
                 </button>
               </>
             ) : isAuthenticated ? (
               <>
                 <button
-                  onClick={goToMenu}
-                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
-                >
-                  Menu
-                </button>
-                <button
                   onClick={goToProfile}
-                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+                  className="flex items-center gap-3 w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
                 >
-                  Profile
+                  {profileData?.user?.profile_image_url ? (
+                    <img
+                      src={profileData.user.profile_image_url}
+                      alt="Profile"
+                      className="w-8 h-8 rounded-full object-cover border-2 border-gray-300"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold border-2 border-gray-300">
+                      {user?.email?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span>Profile</span>
                 </button>
                 {(user?.role === 'admin' || user?.role === 'super_admin') && (
                   <button
                     onClick={goToDashboard}
-                    className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+                    className="flex items-center gap-2 w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
                   >
-                    Dashboard
+                    <LayoutDashboard className="w-5 h-5" />
+                    <span>Dashboard</span>
                   </button>
                 )}
-                <div className="px-4 py-2 text-gray-600">
-                  {user?.email}
+                <div className="flex items-center gap-2 px-4 py-2 text-gray-600">
+                  <Mail className="w-5 h-5" />
+                  <span>{user?.email}</span>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded transition"
+                  className="flex items-center gap-2 w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded transition"
                 >
-                  Sign Out
+                  <LogOut className="w-5 h-5" />
+                  <span>Sign Out</span>
                 </button>
               </>
             ) : null}
