@@ -189,7 +189,8 @@ export default function RevenueAnalytics() {
     },
   });
 
-  const formatCurrency = (value: string | number) => {
+  const formatCurrency = (value: string | number | null | undefined) => {
+    if (value === null || value === undefined) return '$0.00';
     return `$${parseFloat(value.toString()).toFixed(2)}`;
   };
 
@@ -211,7 +212,7 @@ export default function RevenueAnalytics() {
     series: [{
       name: 'Revenue',
       type: 'bar',
-      data: data.slice(0, 10).map(item => parseFloat(item.total_revenue)).reverse(),
+      data: data.slice(0, 10).map(item => parseFloat(item.total_revenue || '0')).reverse(),
       itemStyle: { color: '#10b981' }
     }]
   });
@@ -225,7 +226,7 @@ export default function RevenueAnalytics() {
     series: [{
       name: 'Revenue',
       type: 'bar',
-      data: data.map(table => parseFloat(table.total_revenue)),
+      data: data.map(table => parseFloat(table.total_revenue || '0')),
       itemStyle: { color: '#6366f1' }
     }]
   });
@@ -241,7 +242,7 @@ export default function RevenueAnalytics() {
       { type: 'value', name: 'Orders', position: 'right' }
     ],
     series: [
-      { name: 'Revenue', type: 'line', yAxisIndex: 0, data: data.map(day => parseFloat(day.total_revenue)), smooth: true, itemStyle: { color: '#10b981' } },
+      { name: 'Revenue', type: 'line', yAxisIndex: 0, data: data.map(day => parseFloat(day.total_revenue || '0')), smooth: true, itemStyle: { color: '#10b981' } },
       { name: 'Total Orders', type: 'bar', yAxisIndex: 1, data: data.map(day => day.total_orders), itemStyle: { color: '#6366f1' } },
       { name: 'Completed', type: 'line', yAxisIndex: 1, data: data.map(day => day.completed_orders), smooth: true, itemStyle: { color: '#22c55e' } },
       { name: 'Cancelled', type: 'line', yAxisIndex: 1, data: data.map(day => day.cancelled_orders), smooth: true, itemStyle: { color: '#ef4444' } }
@@ -299,7 +300,7 @@ export default function RevenueAnalytics() {
           name: 'Revenue', 
           type: 'line', 
           yAxisIndex: 0, 
-          data: data.map(item => parseFloat(item.total_revenue)), 
+          data: data.map(item => parseFloat(item.total_revenue || '0')), 
           smooth: true, 
           itemStyle: { color: '#10b981' },
           areaStyle: {
@@ -330,7 +331,7 @@ export default function RevenueAnalytics() {
       name: 'Items',
       type: 'scatter',
       symbolSize: (val: number[]) => Math.sqrt(val[2]) * 3,
-      data: data.slice(0, 15).map(item => [item.times_ordered, parseFloat(item.total_revenue), item.total_quantity])
+      data: data.slice(0, 15).map(item => [item.times_ordered, parseFloat(item.total_revenue || '0'), item.total_quantity])
     }]
   });
 

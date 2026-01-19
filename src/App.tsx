@@ -21,7 +21,7 @@ import RequestPasswordReset from './pages/RequestPasswordReset';
 import ResetPassword from './pages/ResetPassword';
 import QRLanding from './pages/QRLanding';
 import MenuCategoriesAdmin from './pages/MenuCategoriesAdmin';
-import MenuBulkOps from './pages/MenuBulkOps';
+// import MenuBulkOps from './pages/MenuBulkOps';
 import MenuCustomer from './pages/MenuCustomer';
 import MenuItemEditor from './pages/MenuItemEditor';
 import MenuItemsManagement from './pages/MenuItemsManagement';
@@ -135,14 +135,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
+            {/* <Route
               path="/admin/menu-bulk-ops"
               element={
                 <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
                   <MenuBulkOps />
                 </ProtectedRoute>
               }
-            />
+            /> */}
             <Route
               path="/admin/staff-management"
               element={

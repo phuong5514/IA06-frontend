@@ -181,7 +181,7 @@ export default function SystemConfiguration() {
     try {
       const settings = Object.entries(brandingSettings).map(([key, value]) => ({
         key,
-        value: value.toString(),
+        value: value?.toString() ?? '',
       }));
       await updateSettingsMutation.mutateAsync(settings);
     } finally {
@@ -194,7 +194,7 @@ export default function SystemConfiguration() {
     try {
       const settings = Object.entries(workflowSettings).map(([key, value]) => ({
         key,
-        value: value.toString(),
+        value: value?.toString() ?? '',
       }));
       await updateSettingsMutation.mutateAsync(settings);
     } finally {
@@ -207,7 +207,7 @@ export default function SystemConfiguration() {
     try {
       const settings = Object.entries(generalSettings).map(([key, value]) => ({
         key,
-        value: value.toString(),
+        value: value?.toString() ?? '',
       }));
       await updateSettingsMutation.mutateAsync(settings);
     } finally {
