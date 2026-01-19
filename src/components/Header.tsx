@@ -83,6 +83,18 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
   // Fetch unpaid orders status
   useEffect(() => {
     const fetchUnpaidOrders = async () => {
+      // Check for guest orders first
+      const guestOrders = sessionStorage.getItem('guestOrders');
+      if (!isAuthenticated && guestOrders) {
+        try {
+          const orders = JSON.parse(guestOrders);
+          setHasUnpaidOrders(orders.length > 0);
+        } catch (e) {
+          setHasUnpaidOrders(false);
+        }
+        return;
+      }
+      
       if (!isAuthenticated) {
         setHasUnpaidOrders(false);
         return;
@@ -170,32 +182,28 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
             </button>
 
             {/* Billing - only for authenticated users */}
-            {isAuthenticated && (
-              <button
-                onClick={goToBilling}
-                className="relative flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
-                title="View Billing"
-              >
-                <Receipt className="w-5 h-5" />
-                <span>Billing</span>
-                {hasUnpaidOrders && (
-                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                    !
-                  </span>
-                )}
-              </button>  
-            )}
+            <button
+              onClick={goToBilling}
+              className="relative flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+              title="View Billing"
+            >
+              <Receipt className="w-5 h-5" />
+              <span>Billing</span>
+              {hasUnpaidOrders && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  !
+                </span>
+              )}
+            </button>  
 
-            {/* My Orders - only for authenticated users */}
-            {isAuthenticated && (
-              <button
-                onClick={goToOrders}
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
-              >
-                <ClipboardList className="w-5 h-5" />
-                <span>My Orders</span>
-              </button>
-            )}
+            <button
+              onClick={goToOrders}
+              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+            >
+              <ClipboardList className="w-5 h-5" />
+              <span>My Orders</span>
+            </button>
+            
             {!isAuthenticated && showAuthButtons ? (
               <>
                 <button
@@ -307,34 +315,30 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
               )}
             </button>
             
-            {/* Billing - only for authenticated users */}
-            {isAuthenticated && (
-              <button
-                onClick={goToBilling}
-                className="flex items-center justify-between w-full px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
-              >
-                <div className="flex items-center gap-2">
-                  <Receipt className="w-5 h-5" />
-                  <span>Billing</span>
-                </div>
-                {hasUnpaidOrders && (
-                  <span className="bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                    !
-                  </span>
-                )}
-              </button>
-            )}
+            <button
+              onClick={goToBilling}
+              className="flex items-center justify-between w-full px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+            >
+              <div className="flex items-center gap-2">
+                <Receipt className="w-5 h-5" />
+                <span>Billing</span>
+              </div>
+              {hasUnpaidOrders && (
+                <span className="bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  !
+                </span>
+              )}
+            </button>
             
-            {/* My Orders - only for authenticated users */}
-            {isAuthenticated && (
-              <button
-                onClick={goToOrders}
-                className="flex items-center gap-2 w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
-              >
-                <ClipboardList className="w-5 h-5" />
-                <span>My Orders</span>
-              </button>
-            )}
+            {/* My Orders - available for all users */}
+            <button
+              onClick={goToOrders}
+              className="flex items-center gap-2 w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+            >
+              <ClipboardList className="w-5 h-5" />
+              <span>My Orders</span>
+            </button>
+            
             {!isAuthenticated && showAuthButtons ? (
               <>
                 <button

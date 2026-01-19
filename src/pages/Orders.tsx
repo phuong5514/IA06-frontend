@@ -20,10 +20,6 @@ export default function Orders() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/');
-      return;
-    }
     fetchOrders();
   }, [isAuthenticated]);
 
@@ -31,8 +27,21 @@ export default function Orders() {
     try {
       setLoading(true);
       setError(null);
-      const response = await apiClient.get('/orders');
-      setOrders(response.data.orders || []);
+      
+      // For guests, load from sessionStorage
+      if (!isAuthenticated) {
+        const guestOrders = sessionStorage.getItem('guestOrders');
+        if (guestOrders) {
+          const parsedOrders = JSON.parse(guestOrders);
+          setOrders(parsedOrders);
+        } else {
+          setOrders([]);
+        }
+      } else {
+        // For authenticated users, fetch from backend
+        const response = await apiClient.get('/orders');
+        setOrders(response.data.orders || []);
+      }
     } catch (err: any) {
       console.error('Failed to fetch orders:', err);
       setError(err.response?.data?.message || 'Failed to load orders');
@@ -94,7 +103,14 @@ export default function Orders() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 pt-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
+            {!isAuthenticated && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                Guest Mode
+              </span>
+            )}
+          </div>
           <div className="flex gap-3">
             <button
               onClick={() => navigate('/billing')}

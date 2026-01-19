@@ -19,6 +19,7 @@ interface WaiterOrder {
   id: number;
   user_id: string;
   table_id: number | null;
+  session_id?: string;
   user: {
     id: string;
     email: string;

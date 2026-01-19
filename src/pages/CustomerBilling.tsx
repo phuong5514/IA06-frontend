@@ -63,7 +63,11 @@ const CustomerBilling = () => {
 
   useEffect(() => {
     fetchBillingInfo();
-    fetchSavedCards();
+    // Only fetch saved cards if user is authenticated
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchSavedCards();
+    }
   }, []);
 
   const fetchSavedCards = async () => {
@@ -86,8 +90,31 @@ const CustomerBilling = () => {
   const fetchBillingInfo = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/payments/billing');
-      setBillingInfo(response.data);
+      
+      // Check if user is authenticated by trying to get the token
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        // Guest mode - load from sessionStorage
+        const guestOrders = sessionStorage.getItem('guestOrders');
+        if (guestOrders) {
+          const orders = JSON.parse(guestOrders);
+          const totalAmount = orders.reduce((sum: number, order: Order) => 
+            sum + parseFloat(order.total_amount), 0
+          ).toFixed(2);
+          setBillingInfo({
+            orders,
+            totalAmount,
+            unpaidOrders: orders.map((o: Order) => o.id)
+          });
+        } else {
+          setBillingInfo({ orders: [], totalAmount: '0.00', unpaidOrders: [] });
+        }
+      } else {
+        // Authenticated user - fetch from backend
+        const response = await apiClient.get('/payments/billing');
+        setBillingInfo(response.data);
+      }
     } catch (error: any) {
       console.error('Error fetching billing info:', error);
       toast.error(error.response?.data?.message || 'Failed to fetch billing information');
@@ -105,17 +132,35 @@ const CustomerBilling = () => {
     try {
       setProcessingPayment(true);
       
+      const token = localStorage.getItem('token');
+      
+      // Guest users can only pay with cash
+      if (!token && paymentMethod !== 'cash') {
+        toast.error('Please sign in to use card payments');
+        setProcessingPayment(false);
+        return;
+      }
+      
       // If paying with cash
       if (paymentMethod === 'cash') {
-        await apiClient.post(
-          '/payments',
-          {
-            orderIds: billingInfo.unpaidOrders,
-            paymentMethod,
-          }
-        );
-        toast.success('Cash payment initiated. Please pay at the counter.');
-        setTimeout(() => navigate('/orders'), 2000);
+        if (!token) {
+          // Guest cash payment - just show success message
+          toast.success('Cash payment initiated. Please pay at the counter.');
+          // Clear guest orders from sessionStorage after initiating payment
+          sessionStorage.removeItem('guestOrders');
+          setTimeout(() => navigate('/orders'), 2000);
+        } else {
+          // Authenticated user cash payment
+          await apiClient.post(
+            '/payments',
+            {
+              orderIds: billingInfo.unpaidOrders,
+              paymentMethod,
+            }
+          );
+          toast.success('Cash payment initiated. Please pay at the counter.');
+          setTimeout(() => navigate('/orders'), 2000);
+        }
         return;
       }
 
@@ -327,10 +372,17 @@ const CustomerBilling = () => {
           <div className="bg-blue-600 text-white p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold flex items-center">
-                  <Receipt className="w-8 h-8 mr-3" />
-                  Your Bill
-                </h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-bold flex items-center">
+                    <Receipt className="w-8 h-8 mr-3" />
+                    Your Bill
+                  </h1>
+                  {!localStorage.getItem('token') && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-500 text-white">
+                      Guest Mode
+                    </span>
+                  )}
+                </div>
                 <p className="text-blue-100 mt-1">Review and pay for your orders</p>
               </div>
               <div className="text-right">
@@ -356,17 +408,23 @@ const CustomerBilling = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  {order.items.map((item) => (
-                    <div key={item.id} className="flex justify-between items-center text-sm">
-                      <div className="flex-1">
-                        <span className="text-gray-700">{item.menuItem.name}</span>
-                        <span className="text-gray-500 ml-2">× {item.quantity}</span>
+                  {order.items && order.items.length > 0 ? (
+                    order.items.map((item) => (
+                      <div key={item.id} className="flex justify-between items-center text-sm">
+                        <div className="flex-1">
+                          <span className="text-gray-700">{item.menuItem.name}</span>
+                          <span className="text-gray-500 ml-2">× {item.quantity}</span>
+                        </div>
+                        <span className="font-medium text-gray-800">
+                          ${item.total_price}
+                        </span>
                       </div>
-                      <span className="font-medium text-gray-800">
-                        ${item.total_price}
-                      </span>
+                    ))
+                  ) : (
+                    <div className="text-sm text-gray-500">
+                      Order details not available
                     </div>
-                  ))}
+                  )}
                 </div>
                 
                 <div className="mt-2 pt-2 border-t flex justify-between items-center">
@@ -379,6 +437,15 @@ const CustomerBilling = () => {
             {/* Payment Method Selection */}
             <div className="mt-8 pt-6 border-t">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Payment Method</h3>
+              
+              {/* Guest Mode Notice */}
+              {!localStorage.getItem('token') && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Guest Mode:</strong> Only cash payment is available. Sign in to use card payments.
+                  </p>
+                </div>
+              )}
               
               {/* Cash Payment - Always Available */}
               <div className="mb-6">
@@ -410,8 +477,8 @@ const CustomerBilling = () => {
                 </button>
               </div>
 
-              {/* Saved Cards Section */}
-              {savedCards.length > 0 && !useNewCard && (
+              {/* Saved Cards Section - Only for authenticated users */}
+              {localStorage.getItem('token') && savedCards.length > 0 && !useNewCard && (
                 <div className="mb-6">
                   <h4 className="text-md font-medium text-gray-700 mb-3">Saved Cards</h4>
                   <div className="space-y-2">

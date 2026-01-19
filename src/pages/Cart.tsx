@@ -69,19 +69,35 @@ export default function Cart() {
       const response = await apiClient.post('/orders', orderData);
 
       setSuccess(true);
-      clearCart();
       
       // Store order in session storage for guest users to track
       if (!isAuthenticated && session) {
         const guestOrders = JSON.parse(sessionStorage.getItem('guestOrders') || '[]');
         guestOrders.push({
           id: response.data.id,
-          sessionId: session.sessionId,
-          tableNumber: session.tableNumber,
-          createdAt: new Date().toISOString(),
+          session_id: session.sessionId,
+          table_id: session.tableId,
+          created_at: new Date().toISOString(),
+          status: 'pending',
+          total_amount: getTotalPrice().toString(),
+          items: items.map(item => ({
+            id: Math.random(), // Temporary ID for display
+            menu_item_id: item.menuItemId,
+            quantity: item.quantity,
+            unit_price: item.price.toString(),
+            total_price: getItemPrice(item).toString(),
+            menuItem: {
+              id: item.menuItemId,
+              name: item.name,
+              price: item.price.toString()
+            }
+          })),
+          items_count: items.length
         });
         sessionStorage.setItem('guestOrders', JSON.stringify(guestOrders));
       }
+      
+      clearCart();
 
       // Redirect to order tracking page after a short delay
       setTimeout(() => {

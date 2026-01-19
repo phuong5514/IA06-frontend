@@ -254,11 +254,7 @@ function App() {
             />
             <Route
               path="/billing"
-              element={
-                <ProtectedRoute>
-                  <CustomerBilling />
-                </ProtectedRoute>
-              }
+              element={<CustomerBilling />}
             />
             <Route
               path="/waiter/bills"
