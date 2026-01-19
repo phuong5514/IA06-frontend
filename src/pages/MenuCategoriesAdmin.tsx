@@ -269,11 +269,10 @@ export default function MenuCategoriesAdmin() {
       )}
 
       {/* Pagination */}
-      {totalCategories > 0 && (
-        <div className="flex items-center justify-between bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+      <div className="flex items-center justify-between bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
           <div className="flex items-center">
             <div className="text-sm text-gray-700">
-              Showing {startIndex + 1} to {Math.min(endIndex, totalCategories)} of {totalCategories} categories
+              Showing {totalCategories === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, totalCategories)} of {totalCategories} categories
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -336,7 +335,7 @@ export default function MenuCategoriesAdmin() {
             </nav>
           </div>
         </div>
-      )}
+
       </div>
     </DashboardLayout>
   );

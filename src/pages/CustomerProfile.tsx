@@ -893,8 +893,7 @@ export default function CustomerProfile() {
                   </div>
 
                   {/* Pagination Controls */}
-                  {totalPages > 1 && (
-                    <div className="mt-6 flex items-center justify-center gap-2">
+                  <div className="mt-6 flex items-center justify-center gap-2">
                       <button
                         onClick={() => setCurrentPage(1)}
                         disabled={currentPage === 1}
@@ -960,7 +959,6 @@ export default function CustomerProfile() {
                         </svg>
                       </button>
                     </div>
-                  )}
                 </>
               )}
             </div>
