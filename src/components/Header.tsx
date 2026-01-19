@@ -153,22 +153,23 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
               <BookOpen className="w-5 h-5" />
               <span>Menu</span>
             </button>
-            {isAuthenticated && (
-              <button
-                onClick={goToCart}
-                className="relative flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
-                title="View Cart"
-              >
-                <ShoppingCart className="w-5 h-5" />
-                <span>Cart</span>
-                {getTotalItems() > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                    {getTotalItems()}
-                  </span>
-                )}
-              </button>
-            )}
+            
+            {/* Cart - available for both authenticated and guest users */}
+            <button
+              onClick={goToCart}
+              className="relative flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-indigo-600 font-medium transition"
+              title="View Cart"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              <span>Cart</span>
+              {getTotalItems() > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {getTotalItems()}
+                </span>
+              )}
+            </button>
 
+            {/* Billing - only for authenticated users */}
             {isAuthenticated && (
               <button
                 onClick={goToBilling}
@@ -185,6 +186,7 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
               </button>  
             )}
 
+            {/* My Orders - only for authenticated users */}
             {isAuthenticated && (
               <button
                 onClick={goToOrders}
@@ -288,22 +290,24 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
               <BookOpen className="w-5 h-5" />
               <span>Menu</span>
             </button>
-            {isAuthenticated && (
-              <button
-                onClick={goToCart}
-                className="flex items-center justify-between w-full px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
-              >
-                <div className="flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5" />
-                  <span>Cart</span>
-                </div>
-                {getTotalItems() > 0 && (
-                  <span className="bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                    {getTotalItems()}
-                  </span>
-                )}
-              </button>
-            )}
+            
+            {/* Cart - available for both authenticated and guest users */}
+            <button
+              onClick={goToCart}
+              className="flex items-center justify-between w-full px-4 py-2 text-gray-700 hover:bg-gray-100 rounded transition"
+            >
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5" />
+                <span>Cart</span>
+              </div>
+              {getTotalItems() > 0 && (
+                <span className="bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {getTotalItems()}
+                </span>
+              )}
+            </button>
+            
+            {/* Billing - only for authenticated users */}
             {isAuthenticated && (
               <button
                 onClick={goToBilling}
@@ -320,6 +324,8 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
                 )}
               </button>
             )}
+            
+            {/* My Orders - only for authenticated users */}
             {isAuthenticated && (
               <button
                 onClick={goToOrders}

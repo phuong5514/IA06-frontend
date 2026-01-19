@@ -116,33 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      // First, try to end any active session and delete guest user if applicable
-      try {
-        const sessionStr = localStorage.getItem('tableSession') || localStorage.getItem('guestSession');
-        if (sessionStr) {
-          const session = JSON.parse(sessionStr);
-          
-          // End the session (cancels incomplete orders)
-          if (session.sessionId) {
-            await apiClient.post('/guest-session/end', {
-              sessionId: session.sessionId,
-              tableId: session.tableId,
-            });
-          }
-          
-          // Delete guest user account if this is a guest
-          if (session.isGuest && session.guestUserId) {
-            await apiClient.post('/guest-session/delete-guest', {
-              userId: session.guestUserId,
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Failed to end session or delete guest user during logout:', error);
-        // Continue with logout even if session cleanup fails
-      }
-      
-      // Then perform logout
+      // Perform logout request
       const response = await apiClient.post(API_ENDPOINTS.LOGOUT, {});
       return response.data;
     },
@@ -153,9 +127,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Clear user state
       setUser(null);
       
-      // Clear session data
-      localStorage.removeItem('tableSession');
-      localStorage.removeItem('guestSession');
+      // Clear session data (guest sessions are in sessionStorage, not localStorage)
+      sessionStorage.removeItem('tableSession');
+      sessionStorage.removeItem('cart');
+      sessionStorage.removeItem('guestOrders');
       
       // Clear all queries
       queryClient.clear();

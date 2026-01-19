@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { apiClient, tokenManager } from '../config/api';
+import { apiClient } from '../config/api';
 import { X, Check } from 'lucide-react';
 
 interface TableInfo {
@@ -10,25 +9,10 @@ interface TableInfo {
   menu_url: string;
 }
 
-interface GuestSessionResponse {
-  success: boolean;
-  message: string;
-  guestUser: {
-    id: string;
-    email: string;
-    name: string;
-    role: string;
-    isGuest: boolean;
-  };
-  accessToken: string;
-  sessionId: string;
-}
-
 export default function QRLanding() {
   const { qr_token } = useParams<{ qr_token: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tableInfo, setTableInfo] = useState<TableInfo | null>(null);
@@ -45,76 +29,34 @@ export default function QRLanding() {
       }
 
       try {
-        // Step 1: Verify QR token
+        // Verify QR token and get table info
         const verifyResponse = await apiClient.get<TableInfo>(
           `/tables/verify/${token}`
         );
 
         setTableInfo(verifyResponse.data);
 
-        // Step 2: Initialize guest session
-        const guestSessionResponse = await apiClient.post<GuestSessionResponse>(
-          '/guest-session/initialize',
-          {
-            tableId: verifyResponse.data.table_id,
-          }
-        );
+        // Generate a unique session ID for this guest session
+        const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        // Step 3: Store guest access token
-        tokenManager.setAccessToken(guestSessionResponse.data.accessToken);
-        
-        // Step 4: Store session info in localStorage for table session context
+        // Store session info in sessionStorage (cleared when tab closes)
         const sessionData = {
           tableId: verifyResponse.data.table_id,
           tableNumber: verifyResponse.data.table_number,
-          sessionId: guestSessionResponse.data.sessionId,
-          guestUserId: guestSessionResponse.data.guestUser.id,
+          sessionId: sessionId,
           isGuest: true,
           startedAt: new Date().toISOString(),
         };
         
-        // Store in both keys for compatibility
-        localStorage.setItem('guestSession', JSON.stringify(sessionData));
-        localStorage.setItem('tableSession', JSON.stringify(sessionData));
-
-        // Step 5: Ensure everything is ready before redirecting
-        // First, wait for user profile query to refetch
-        await queryClient.refetchQueries({ 
-          queryKey: ['user', 'me'],
-          exact: true 
-        });
-
-        // Poll until user data is actually available in the cache
-        let attempts = 0;
-        const maxAttempts = 100; 
-        while (attempts < maxAttempts) {
-          const userData = queryClient.getQueryData(['user', 'me']);
-          const storedSession = localStorage.getItem('tableSession');
-          
-          if (userData && storedSession) {
-            console.log('✅ Guest user authenticated:', userData);
-            console.log('✅ Table session stored:', JSON.parse(storedSession));
-            break;
-          }
-          
-          // Wait 100ms before checking again
-          await new Promise(resolve => setTimeout(resolve, 500));
-          attempts++;
-        }
-
-        // Final verification
-        const finalUserData = queryClient.getQueryData(['user', 'me']);
-        const finalStoredSession = localStorage.getItem('tableSession');
+        // Use sessionStorage instead of localStorage (cleared when tab closes)
+        sessionStorage.setItem('tableSession', JSON.stringify(sessionData));
         
-        if (!finalUserData || !finalStoredSession) {
-          throw new Error('Timeout: Failed to initialize guest session properly. Please try again.');
-        }
-
+        console.log('✅ Guest session created:', sessionData);
         setLoading(false);
 
         // Small delay to show success message, then redirect
         setTimeout(() => {
-          navigate(`/menu?table=${verifyResponse.data.table_id}&session=${guestSessionResponse.data.sessionId}`);
+          navigate(`/menu?table=${verifyResponse.data.table_id}&session=${sessionId}`);
         }, 500);
       } catch (err: any) {
         setLoading(false);

@@ -578,7 +578,15 @@ export default function KitchenDisplay() {
                       {/* Customer Info */}
                       <div className="p-2 bg-gray-50 rounded-lg">
                         <p className="text-xs font-medium text-gray-600">Customer:</p>
-                        <p className="text-sm font-bold text-gray-900">{order.user.name || order.user.email}</p>
+                        <p className="text-sm font-bold text-gray-900">
+                          {order.user ? (
+                            order.user.name || order.user.email
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              Guest Order
+                            </span>
+                          )}
+                        </p>
                       </div>
                     </div>
 

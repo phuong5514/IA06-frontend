@@ -194,19 +194,11 @@ function App() {
             />
             <Route
               path="/menu/customer"
-              element={
-                <ProtectedRoute>
-                  <MenuCustomer />
-                </ProtectedRoute>
-              }
+              element={<MenuCustomer />}
             />
             <Route
               path="/menu/item/:id"
-              element={
-                <ProtectedRoute>
-                  <MenuItemDetail />
-                </ProtectedRoute>
-              }
+              element={<MenuItemDetail />}
             />
             <Route
               path="/profile"
@@ -218,11 +210,7 @@ function App() {
             />
             <Route
               path="/cart"
-              element={
-                <ProtectedRoute>
-                  <Cart />
-                </ProtectedRoute>
-              }
+              element={<Cart />}
             />
             <Route
               path="/orders/:orderId"

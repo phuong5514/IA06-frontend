@@ -638,7 +638,22 @@ export default function WaiterOrders() {
                     {/* Customer Info */}
                     <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                       <p className="text-sm font-medium text-gray-700">Customer:</p>
-                      <p className="text-sm text-gray-900">{order.user.name || order.user.email}</p>
+                      <p className="text-sm text-gray-900">
+                        {order.user ? (
+                          order.user.name || order.user.email
+                        ) : (
+                          <span className="flex items-center gap-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              Guest
+                            </span>
+                            {order.session_id && (
+                              <span className="text-xs text-gray-500">
+                                Session: {order.session_id.slice(-8)}
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </p>
                       {order.table && (
                         <div className="mt-2 flex items-center gap-2">
                           <span className="inline-flex items-center px-2 py-1 rounded-md bg-indigo-100 text-indigo-800 text-xs font-medium">

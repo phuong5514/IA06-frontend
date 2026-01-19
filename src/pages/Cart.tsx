@@ -31,14 +31,15 @@ export default function Cart() {
   };
 
   const handleConfirmOrder = async () => {
-    if (!isAuthenticated) {
-      alert('Please sign in to place an order');
-      navigate('/');
+    if (items.length === 0) {
+      alert('Your cart is empty');
       return;
     }
 
-    if (items.length === 0) {
-      alert('Your cart is empty');
+    // Require table session for guest orders
+    if (!isAuthenticated && !session) {
+      alert('Please scan a QR code at your table to place an order');
+      navigate('/');
       return;
     }
 
@@ -64,21 +65,32 @@ export default function Cart() {
         ...(session?.sessionId && { session_id: session.sessionId }), // Include session_id for guest sessions
       };
 
-      // Submit the order to the backend
+      // Submit the order to the backend (works for both guest and authenticated users)
       const response = await apiClient.post('/orders', orderData);
 
       setSuccess(true);
       clearCart();
       
-      // Don't end the session - allow multiple orders in the same session
-      // Session should only end when:
-      // 1. User manually clicks "End Session"
-      // 2. User logs out
-      // 3. Waiter ends the session
+      // Store order in session storage for guest users to track
+      if (!isAuthenticated && session) {
+        const guestOrders = JSON.parse(sessionStorage.getItem('guestOrders') || '[]');
+        guestOrders.push({
+          id: response.data.id,
+          sessionId: session.sessionId,
+          tableNumber: session.tableNumber,
+          createdAt: new Date().toISOString(),
+        });
+        sessionStorage.setItem('guestOrders', JSON.stringify(guestOrders));
+      }
 
       // Redirect to order tracking page after a short delay
       setTimeout(() => {
-        navigate(`/orders/${response.data.id}`);
+        if (isAuthenticated) {
+          navigate(`/orders/${response.data.id}`);
+        } else {
+          // For guests, redirect to a guest order tracking page or menu
+          navigate(`/menu?table=${orderTableId}&session=${session?.sessionId}`);
+        }
       }, 2000);
     } catch (err: any) {
       console.error('Order submission error:', err);
