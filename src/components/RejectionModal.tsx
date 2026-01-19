@@ -66,7 +66,7 @@ export default function RejectionModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg transform transition-all animate-slideIn">
         {/* Header */}
         <div className="bg-red-600 text-white px-6 py-4 rounded-t-2xl">

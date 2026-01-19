@@ -116,13 +116,12 @@ function Header({ onOpenSignIn, onOpenSignUp, showAuthButtons = true }: HeaderPr
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
-  // Don't show header on dashboard pages (they have their own layout), home page, or for staff roles
+  // Don't show header on dashboard pages (they have their own layout) or for staff roles
   if (
     location.pathname.startsWith('/dashboard') || 
     location.pathname.startsWith('/admin/') || 
     location.pathname.startsWith('/waiter/') ||
-    location.pathname.startsWith('/kitchen/') ||
-    location.pathname === '/'
+    location.pathname.startsWith('/kitchen/')
   ) {
     return null;
   }

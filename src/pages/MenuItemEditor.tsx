@@ -1011,7 +1011,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
       {/* Modifier Group Modal */}
       {showModifierGroupModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-lg font-medium mb-4">
               {editingModifierGroup ? 'Edit Modifier Group' : 'Add Modifier Group'}
@@ -1077,7 +1077,7 @@ export default function MenuItemEditor({ itemId, onSave, onCancel }: MenuItemEdi
 
       {/* Modifier Option Modal */}
       {showModifierOptionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-lg font-medium mb-4">
               {editingModifierOption ? 'Edit Modifier Option' : 'Add Modifier Option'}

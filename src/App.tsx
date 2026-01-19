@@ -93,6 +93,12 @@ function App() {
                   }}
                 />
                 <Header onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
+                <AuthModal
+                  isOpen={isModalOpen}
+                  onClose={() => setIsModalOpen(false)}
+                  mode={modalMode}
+                  onSwitchMode={switchMode}
+                />
               <Routes>
             <Route
               path="/"
@@ -102,12 +108,6 @@ function App() {
                   style={{ backgroundImage: `url(${backgroundImage})` }}
                 >
                   <Home onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
-                  <AuthModal
-                    isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
-                    mode={modalMode}
-                    onSwitchMode={switchMode}
-                  />
                 </div>
               }
             />
