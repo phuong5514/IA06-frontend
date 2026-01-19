@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { apiClient } from '../config/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { apiClient, tokenManager } from '../config/api';
 import { X, Check } from 'lucide-react';
-import { tokenManager } from '../utils/tokenManager';
 
 interface TableInfo {
   table_id: number;
@@ -28,6 +28,7 @@ export default function QRLanding() {
   const { qr_token } = useParams<{ qr_token: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tableInfo, setTableInfo] = useState<TableInfo | null>(null);
@@ -63,13 +64,21 @@ export default function QRLanding() {
         tokenManager.setAccessToken(guestSessionResponse.data.accessToken);
         
         // Step 4: Store session info in localStorage for table session context
-        localStorage.setItem('guestSession', JSON.stringify({
+        const sessionData = {
           tableId: verifyResponse.data.table_id,
           tableNumber: verifyResponse.data.table_number,
           sessionId: guestSessionResponse.data.sessionId,
           guestUserId: guestSessionResponse.data.guestUser.id,
           isGuest: true,
-        }));
+          startedAt: new Date().toISOString(),
+        };
+        
+        // Store in both keys for compatibility
+        localStorage.setItem('guestSession', JSON.stringify(sessionData));
+        localStorage.setItem('tableSession', JSON.stringify(sessionData));
+
+        // Step 5: Trigger user profile refetch so AuthContext recognizes the guest user
+        queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
 
         setLoading(false);
 

@@ -237,24 +237,12 @@ export default function MenuCustomer() {
     }
   };
 
-  // Initialize guest session from localStorage if available
+  // Sync tableId from session context if available
   useEffect(() => {
-    const guestSessionStr = localStorage.getItem('guestSession');
-    if (guestSessionStr && !session) {
-      try {
-        const guestSession = JSON.parse(guestSessionStr);
-        startSession(
-          guestSession.tableId,
-          guestSession.tableNumber,
-          guestSession.sessionId,
-          guestSession.guestUserId
-        );
-        setTableId(guestSession.tableId);
-      } catch (error) {
-        console.error('Failed to parse guest session:', error);
-      }
+    if (session && session.tableId) {
+      setTableId(session.tableId);
     }
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     fetchMenu();

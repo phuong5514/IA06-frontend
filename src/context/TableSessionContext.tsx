@@ -22,8 +22,17 @@ const TableSessionContext = createContext<TableSessionContextType | undefined>(u
 export function TableSessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<TableSession | null>(() => {
     // Load session from localStorage on initialization
-    const savedSession = localStorage.getItem('tableSession');
-    return savedSession ? JSON.parse(savedSession) : null;
+    // Check both 'tableSession' and 'guestSession' keys
+    const savedSession = localStorage.getItem('tableSession') || localStorage.getItem('guestSession');
+    if (savedSession) {
+      try {
+        return JSON.parse(savedSession);
+      } catch (error) {
+        console.error('Failed to parse saved session:', error);
+        return null;
+      }
+    }
+    return null;
   });
 
   // Save session to localStorage whenever it changes

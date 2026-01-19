@@ -49,6 +49,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [userData]);
 
+  // Watch for token changes and refetch user profile
+  // This is needed when a guest token is set after the component mounts
+  useEffect(() => {
+    const token = tokenManager.getAccessToken();
+    if (token && !user) {
+      // Token exists but no user data - refetch
+      refetchUser();
+    }
+  }, [user, refetchUser]);
+
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async ({ email, password }: { email: string; password: string }) => {

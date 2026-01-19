@@ -118,7 +118,7 @@ export const API_ENDPOINTS = {
   LOGIN: '/user/login',
   REFRESH: '/user/refresh',
   LOGOUT: '/user/logout',
-  ME: '/user/me',
+  ME: '/auth/me',
   MENU_ITEM: (id: number) => `/menu/items/${id}`,
   REVIEWS: '/reviews',
   REVIEW_AVERAGE: (menuItemId: number) => `/reviews/average/${menuItemId}`,
