@@ -77,15 +77,45 @@ export default function QRLanding() {
         localStorage.setItem('guestSession', JSON.stringify(sessionData));
         localStorage.setItem('tableSession', JSON.stringify(sessionData));
 
-        // Step 5: Trigger user profile refetch so AuthContext recognizes the guest user
-        queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
+        // Step 5: Ensure everything is ready before redirecting
+        // First, wait for user profile query to refetch
+        await queryClient.refetchQueries({ 
+          queryKey: ['user', 'me'],
+          exact: true 
+        });
+
+        // Poll until user data is actually available in the cache
+        let attempts = 0;
+        const maxAttempts = 100; 
+        while (attempts < maxAttempts) {
+          const userData = queryClient.getQueryData(['user', 'me']);
+          const storedSession = localStorage.getItem('tableSession');
+          
+          if (userData && storedSession) {
+            console.log('✅ Guest user authenticated:', userData);
+            console.log('✅ Table session stored:', JSON.parse(storedSession));
+            break;
+          }
+          
+          // Wait 100ms before checking again
+          await new Promise(resolve => setTimeout(resolve, 500));
+          attempts++;
+        }
+
+        // Final verification
+        const finalUserData = queryClient.getQueryData(['user', 'me']);
+        const finalStoredSession = localStorage.getItem('tableSession');
+        
+        if (!finalUserData || !finalStoredSession) {
+          throw new Error('Timeout: Failed to initialize guest session properly. Please try again.');
+        }
 
         setLoading(false);
 
-        // Redirect to menu after a short delay
+        // Small delay to show success message, then redirect
         setTimeout(() => {
           navigate(`/menu?table=${verifyResponse.data.table_id}&session=${guestSessionResponse.data.sessionId}`);
-        }, 1500);
+        }, 500);
       } catch (err: any) {
         setLoading(false);
         if (err.response?.data?.message) {
@@ -128,7 +158,7 @@ export default function QRLanding() {
           </div>
         )}
 
-        {!loading && tableInfo && (
+        {!loading && tableInfo && !error && (
           <div className="text-center">
             <div className="bg-green-100 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
               <Check className="h-8 w-8 text-green-600" />

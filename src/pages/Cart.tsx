@@ -9,7 +9,7 @@ import { CheckCircle, ShoppingCart, Trash2, Edit } from 'lucide-react';
 export default function Cart() {
   const { items, removeItem, updateQuantity, clearCart, getTotalPrice, getItemPrice, tableId } = useCart();
   const { isAuthenticated } = useAuth();
-  const { session, endSession } = useTableSession();
+  const { session } = useTableSession();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,10 +70,11 @@ export default function Cart() {
       setSuccess(true);
       clearCart();
       
-      // End the table session after successful order
-      if (session) {
-        endSession();
-      }
+      // Don't end the session - allow multiple orders in the same session
+      // Session should only end when:
+      // 1. User manually clicks "End Session"
+      // 2. User logs out
+      // 3. Waiter ends the session
 
       // Redirect to order tracking page after a short delay
       setTimeout(() => {

@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { apiClient } from '../config/api';
+import toast from 'react-hot-toast';
 
 interface TableSession {
   tableId: number;
@@ -13,7 +15,7 @@ interface TableSession {
 interface TableSessionContextType {
   session: TableSession | null;
   startSession: (tableId: number, tableNumber: string, sessionId: string, guestUserId?: string) => void;
-  endSession: () => void;
+  endSession: () => Promise<void>;
   isSessionActive: boolean;
 }
 
@@ -56,8 +58,47 @@ export function TableSessionProvider({ children }: { children: ReactNode }) {
     setSession(newSession);
   };
 
-  const endSession = () => {
+  const endSession = async () => {
+    // If there's an active session, notify backend
+    if (session && session.sessionId) {
+      try {
+        // End the session (cancels incomplete orders)
+        const response = await apiClient.post('/guest-session/end', {
+          sessionId: session.sessionId,
+          tableId: session.tableId,
+        });
+
+        if (response.data.success) {
+          const { ordersCancelled } = response.data;
+          
+          // Delete guest user if this is a guest session
+          if (session.isGuest && session.guestUserId) {
+            try {
+              await apiClient.post('/guest-session/delete-guest', {
+                userId: session.guestUserId,
+              });
+            } catch (deleteError) {
+              console.error('Failed to delete guest user:', deleteError);
+              // Continue even if guest deletion fails
+            }
+          }
+          
+          if (ordersCancelled > 0) {
+            toast.success(`Session ended. ${ordersCancelled} incomplete order${ordersCancelled !== 1 ? 's' : ''} cancelled.`);
+          } else {
+            toast.success('Session ended successfully.');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to end session on server:', error);
+        toast.error('Failed to end session on server, but local session cleared.');
+      }
+    }
+    
+    // Clear local session data
     setSession(null);
+    localStorage.removeItem('tableSession');
+    localStorage.removeItem('guestSession');
   };
 
   const isSessionActive = session !== null;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
 import { apiClient } from '../config/api';
@@ -9,7 +9,7 @@ import { useWebSocket } from '../context/WebSocketContext';
 import { useQuery } from '@tanstack/react-query';
 import QRScannerModal from '../components/QRScannerModal';
 import menuBackground from '../assets/menu_background.png';
-import { Check, QrCode, Heart, Clock, Search, Star, Settings, Info, CheckCircle, PartyPopper, Frown, ChefHat, Utensils, Ban } from 'lucide-react';
+import { Check, QrCode, Heart, Clock, Search, Star, Settings, Info, CheckCircle, PartyPopper, Frown, ChefHat, Utensils, Ban, XCircle } from 'lucide-react';
 
 interface MenuCategory {
   id: number;
@@ -43,10 +43,10 @@ export default function MenuCustomer() {
   const [sortBy, setSortBy] = useState<'none' | 'popularity'>('none');
   const [showChefRecommendation, setShowChefRecommendation] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [isEndingSession, setIsEndingSession] = useState(false);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { addItem, setTableId } = useCart();
-  const { session, isSessionActive, startSession } = useTableSession();
+  const { session, isSessionActive, endSession } = useTableSession();
   const { user } = useAuth();
   const { onOrderStatusChange, onOrderAccepted, onOrderRejected, isConnected } = useWebSocket();
   
@@ -237,6 +237,27 @@ export default function MenuCustomer() {
     }
   };
 
+  const handleEndSession = async () => {
+    if (!session) return;
+    
+    const confirmed = window.confirm(
+      'Are you sure you want to end this session? All incomplete orders will be cancelled.'
+    );
+    
+    if (!confirmed) return;
+    
+    setIsEndingSession(true);
+    try {
+      await endSession();
+      // Clear cart as well
+      setTableId(null);
+    } catch (error) {
+      console.error('Error ending session:', error);
+    } finally {
+      setIsEndingSession(false);
+    }
+  };
+
   // Sync tableId from session context if available
   useEffect(() => {
     if (session && session.tableId) {
@@ -391,6 +412,19 @@ export default function MenuCustomer() {
                   <Check className="w-5 h-5" />
                   <span className="font-medium">Table {session.tableNumber}</span>
                 </div>
+              )}
+              
+              {/* End Session Button - Only show if session is active */}
+              {isSessionActive && session && (
+                <button
+                  onClick={handleEndSession}
+                  disabled={isEndingSession}
+                  className="bg-red-600/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg hover:bg-red-700/90 transition-colors border border-white/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="End session and cancel incomplete orders"
+                >
+                  <XCircle className="w-5 h-5" />
+                  <span className="font-medium">{isEndingSession ? 'Ending...' : 'End Session'}</span>
+                </button>
               )}
               
               {/* Scan QR Button */}

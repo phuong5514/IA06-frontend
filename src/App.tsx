@@ -34,6 +34,7 @@ import Cart from './pages/Cart';
 import OrderTracking from './pages/OrderTracking';
 import Orders from './pages/Orders';
 import WaiterOrders from './pages/WaiterOrders';
+import SessionManagement from './pages/SessionManagement';
 import KitchenDisplay from './pages/KitchenDisplay';
 import CustomerBilling from './pages/CustomerBilling';
 import WaiterBillManagement from './pages/WaiterBillManagement';
@@ -244,6 +245,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRoles={['waiter', 'admin', 'super_admin']}>
                   <WaiterOrders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/waiter/sessions"
+              element={
+                <ProtectedRoute requiredRoles={['waiter', 'admin', 'super_admin']}>
+                  <SessionManagement />
                 </ProtectedRoute>
               }
             />
