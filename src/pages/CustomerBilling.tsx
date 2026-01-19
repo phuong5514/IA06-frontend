@@ -91,30 +91,48 @@ const CustomerBilling = () => {
     try {
       setLoading(true);
       
-      // Check if user is authenticated by trying to get the token
+      // Check if user is authenticated
       const token = localStorage.getItem('token');
       
-      if (!token) {
-        // Guest mode - load from sessionStorage
-        const guestOrders = sessionStorage.getItem('guestOrders');
-        if (guestOrders) {
-          const orders = JSON.parse(guestOrders);
-          const totalAmount = orders.reduce((sum: number, order: Order) => 
-            sum + parseFloat(order.total_amount), 0
-          ).toFixed(2);
-          setBillingInfo({
-            orders,
-            totalAmount,
-            unpaidOrders: orders.map((o: Order) => o.id)
-          });
-        } else {
-          setBillingInfo({ orders: [], totalAmount: '0.00', unpaidOrders: [] });
-        }
-      } else {
-        // Authenticated user - fetch from backend
+      // Get sessionId from tableSession in sessionStorage
+      const tableSessionStr = sessionStorage.getItem('tableSession');
+      console.log('TableSession string:', tableSessionStr);
+      console.log('Has token:', !!token);
+      
+      // For authenticated users without a table session, fetch by userId (backend will use req.user.userId)
+      if (token && !tableSessionStr) {
+        console.log('Authenticated user without table session - fetching by userId');
+        // Pass empty sessionId, backend will use userId from token
         const response = await apiClient.get('/payments/billing');
         setBillingInfo(response.data);
+        setLoading(false);
+        return;
       }
+      
+      if (!tableSessionStr) {
+        // No active session and not authenticated
+        console.log('No tableSession found in sessionStorage and not authenticated');
+        setBillingInfo({ orders: [], totalAmount: '0.00', unpaidOrders: [] });
+        setLoading(false);
+        return;
+      }
+      
+      const tableSession = JSON.parse(tableSessionStr);
+      const sessionId = tableSession.sessionId;
+      console.log('Parsed sessionId:', sessionId);
+      
+      if (!sessionId) {
+        // No sessionId in session
+        console.log('No sessionId found in tableSession');
+        setBillingInfo({ orders: [], totalAmount: '0.00', unpaidOrders: [] });
+        setLoading(false);
+        return;
+      }
+      
+      // Always fetch from backend using sessionId
+      console.log('Fetching billing info with sessionId:', sessionId);
+      const response = await apiClient.get(`/payments/billing?sessionId=${encodeURIComponent(sessionId)}`);
+      setBillingInfo(response.data);
     } catch (error: any) {
       console.error('Error fetching billing info:', error);
       toast.error(error.response?.data?.message || 'Failed to fetch billing information');
@@ -134,6 +152,23 @@ const CustomerBilling = () => {
       
       const token = localStorage.getItem('token');
       
+      // Get sessionId from tableSession
+      const tableSessionStr = sessionStorage.getItem('tableSession');
+      if (!tableSessionStr) {
+        toast.error('Session not found. Please scan QR code again.');
+        setProcessingPayment(false);
+        return;
+      }
+      
+      const tableSession = JSON.parse(tableSessionStr);
+      const sessionId = tableSession.sessionId;
+      
+      if (!sessionId) {
+        toast.error('Session ID not found. Please scan QR code again.');
+        setProcessingPayment(false);
+        return;
+      }
+      
       // Guest users can only pay with cash
       if (!token && paymentMethod !== 'cash') {
         toast.error('Please sign in to use card payments');
@@ -143,24 +178,17 @@ const CustomerBilling = () => {
       
       // If paying with cash
       if (paymentMethod === 'cash') {
-        if (!token) {
-          // Guest cash payment - just show success message
-          toast.success('Cash payment initiated. Please pay at the counter.');
-          // Clear guest orders from sessionStorage after initiating payment
-          sessionStorage.removeItem('guestOrders');
-          setTimeout(() => navigate('/orders'), 2000);
-        } else {
-          // Authenticated user cash payment
-          await apiClient.post(
-            '/payments',
-            {
-              orderIds: billingInfo.unpaidOrders,
-              paymentMethod,
-            }
-          );
-          toast.success('Cash payment initiated. Please pay at the counter.');
-          setTimeout(() => navigate('/orders'), 2000);
-        }
+        // Always use API with sessionId
+        await apiClient.post(
+          '/payments',
+          {
+            orderIds: billingInfo.unpaidOrders,
+            paymentMethod,
+            sessionId,
+          }
+        );
+        toast.success('Cash payment initiated. Please pay at the counter.');
+        setTimeout(() => navigate('/orders'), 2000);
         return;
       }
 
@@ -171,13 +199,14 @@ const CustomerBilling = () => {
           toast.error('Selected card not found');
           return;
         }
-
+        
         // Create payment and charge using saved payment method
         const response = await apiClient.post(
           '/payments',
           {
             orderIds: billingInfo.unpaidOrders,
             paymentMethod: 'stripe',
+            sessionId,
           }
         );
 
@@ -231,6 +260,7 @@ const CustomerBilling = () => {
         {
           orderIds: billingInfo.unpaidOrders,
           paymentMethod: 'stripe',
+          sessionId,
         }
       );
 

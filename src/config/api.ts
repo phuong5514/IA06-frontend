@@ -5,13 +5,28 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 // In-memory token storage
 let accessToken: string | null = null;
 
+// Initialize token from localStorage on app load
+if (typeof window !== 'undefined') {
+  const storedToken = localStorage.getItem('token');
+  if (storedToken) {
+    accessToken = storedToken;
+  }
+}
+
 export const tokenManager = {
   getAccessToken: () => accessToken,
   setAccessToken: (token: string | null) => {
     accessToken = token;
+    // Also update localStorage for persistence
+    if (token) {
+      localStorage.setItem('token', token);
+    } else {
+      localStorage.removeItem('token');
+    }
   },
   clearAccessToken: () => {
     accessToken = null;
+    localStorage.removeItem('token');
   },
 };
 

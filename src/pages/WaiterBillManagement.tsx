@@ -37,7 +37,7 @@ interface Payment {
     id: string;
     name: string;
     email: string;
-  };
+  } | null;
   orders: Order[];
 }
 
@@ -184,7 +184,9 @@ const WaiterBillManagement = () => {
                   </div>
                   <div className="flex items-center text-gray-700">
                     <User className="w-4 h-4 mr-2" />
-                    <span className="font-medium">{payment.user.name || payment.user.email}</span>
+                    <span className="font-medium">
+                      {payment.user ? (payment.user.name || payment.user.email) : 'Guest Customer'}
+                    </span>
                   </div>
                   <div className="flex items-center text-gray-600 text-sm mt-1">
                     <Clock className="w-4 h-4 mr-2" />
@@ -281,7 +283,9 @@ const WaiterBillManagement = () => {
               </div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-gray-700">Customer:</span>
-                <span className="font-semibold">{selectedPayment.user.name || selectedPayment.user.email}</span>
+                <span className="font-semibold">
+                  {selectedPayment.user ? (selectedPayment.user.name || selectedPayment.user.email) : 'Guest Customer'}
+                </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-700">Amount:</span>
