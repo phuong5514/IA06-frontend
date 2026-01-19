@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
 import { apiClient } from '../config/api';
@@ -44,8 +44,9 @@ export default function MenuCustomer() {
   const [showChefRecommendation, setShowChefRecommendation] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { addItem, setTableId } = useCart();
-  const { session, isSessionActive } = useTableSession();
+  const { session, isSessionActive, startSession } = useTableSession();
   const { user } = useAuth();
   const { onOrderStatusChange, onOrderAccepted, onOrderRejected, isConnected } = useWebSocket();
   
@@ -235,6 +236,25 @@ export default function MenuCustomer() {
       setTableId(session.tableId);
     }
   };
+
+  // Initialize guest session from localStorage if available
+  useEffect(() => {
+    const guestSessionStr = localStorage.getItem('guestSession');
+    if (guestSessionStr && !session) {
+      try {
+        const guestSession = JSON.parse(guestSessionStr);
+        startSession(
+          guestSession.tableId,
+          guestSession.tableNumber,
+          guestSession.sessionId,
+          guestSession.guestUserId
+        );
+        setTableId(guestSession.tableId);
+      } catch (error) {
+        console.error('Failed to parse guest session:', error);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     fetchMenu();

@@ -4,12 +4,15 @@ import type { ReactNode } from 'react';
 interface TableSession {
   tableId: number;
   tableNumber: string;
+  sessionId: string;
   startedAt: string;
+  guestUserId?: string;
+  isGuest?: boolean;
 }
 
 interface TableSessionContextType {
   session: TableSession | null;
-  startSession: (tableId: number, tableNumber: string) => void;
+  startSession: (tableId: number, tableNumber: string, sessionId: string, guestUserId?: string) => void;
   endSession: () => void;
   isSessionActive: boolean;
 }
@@ -32,11 +35,14 @@ export function TableSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [session]);
 
-  const startSession = (tableId: number, tableNumber: string) => {
+  const startSession = (tableId: number, tableNumber: string, sessionId: string, guestUserId?: string) => {
     const newSession: TableSession = {
       tableId,
       tableNumber,
+      sessionId,
       startedAt: new Date().toISOString(),
+      guestUserId,
+      isGuest: !!guestUserId,
     };
     setSession(newSession);
   };

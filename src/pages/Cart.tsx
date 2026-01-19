@@ -61,6 +61,7 @@ export default function Cart() {
           })),
         })),
         ...(orderTableId && { table_id: orderTableId }), // Include table_id if available
+        ...(session?.sessionId && { session_id: session.sessionId }), // Include session_id for guest sessions
       };
 
       // Submit the order to the backend

@@ -2,11 +2,26 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiClient } from '../config/api';
 import { X, Check } from 'lucide-react';
+import { tokenManager } from '../utils/tokenManager';
 
 interface TableInfo {
   table_id: number;
   table_number: string;
   menu_url: string;
+}
+
+interface GuestSessionResponse {
+  success: boolean;
+  message: string;
+  guestUser: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    isGuest: boolean;
+  };
+  accessToken: string;
+  sessionId: string;
 }
 
 export default function QRLanding() {
@@ -29,16 +44,38 @@ export default function QRLanding() {
       }
 
       try {
-        const response = await apiClient.get<TableInfo>(
+        // Step 1: Verify QR token
+        const verifyResponse = await apiClient.get<TableInfo>(
           `/tables/verify/${token}`
         );
 
-        setTableInfo(response.data);
+        setTableInfo(verifyResponse.data);
+
+        // Step 2: Initialize guest session
+        const guestSessionResponse = await apiClient.post<GuestSessionResponse>(
+          '/guest-session/initialize',
+          {
+            tableId: verifyResponse.data.table_id,
+          }
+        );
+
+        // Step 3: Store guest access token
+        tokenManager.setAccessToken(guestSessionResponse.data.accessToken);
+        
+        // Step 4: Store session info in localStorage for table session context
+        localStorage.setItem('guestSession', JSON.stringify({
+          tableId: verifyResponse.data.table_id,
+          tableNumber: verifyResponse.data.table_number,
+          sessionId: guestSessionResponse.data.sessionId,
+          guestUserId: guestSessionResponse.data.guestUser.id,
+          isGuest: true,
+        }));
+
         setLoading(false);
 
         // Redirect to menu after a short delay
         setTimeout(() => {
-          navigate(`/menu?table=${response.data.table_id}`);
+          navigate(`/menu?table=${verifyResponse.data.table_id}&session=${guestSessionResponse.data.sessionId}`);
         }, 1500);
       } catch (err: any) {
         setLoading(false);
