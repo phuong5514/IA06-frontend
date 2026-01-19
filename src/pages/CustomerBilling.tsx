@@ -5,6 +5,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { CreditCard, Banknote, Receipt, ArrowLeft, Loader2, Cross, AlertCircle } from 'lucide-react';
 import { apiClient } from '../config/api';
+import { useAuth } from '../context/AuthContext';
 // import DashboardLayout from '../components/DashboardLayout';
 
 // Initialize Stripe
@@ -49,6 +50,7 @@ interface Payment {
 
 const CustomerBilling = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [billingInfo, setBillingInfo] = useState<BillingInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'stripe'>('cash');
@@ -64,11 +66,10 @@ const CustomerBilling = () => {
   useEffect(() => {
     fetchBillingInfo();
     // Only fetch saved cards if user is authenticated
-    const token = localStorage.getItem('token');
-    if (token) {
+    if (isAuthenticated) {
       fetchSavedCards();
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const fetchSavedCards = async () => {
     try {
@@ -169,9 +170,9 @@ const CustomerBilling = () => {
         return;
       }
       
-      // Guest users can only pay with cash
-      if (!token && paymentMethod !== 'cash') {
-        toast.error('Please sign in to use card payments');
+      // Guest users cannot use saved cards (only one-time payments)
+      if (!token && paymentMethod === 'stripe' && selectedCard) {
+        toast.error('Please sign in to use saved cards');
         setProcessingPayment(false);
         return;
       }
@@ -469,10 +470,16 @@ const CustomerBilling = () => {
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Payment Method</h3>
               
               {/* Guest Mode Notice */}
-              {!localStorage.getItem('token') && (
+              {!isAuthenticated && (
                 <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-blue-800">
-                    <strong>Guest Mode:</strong> Only cash payment is available. Sign in to use card payments.
+                    <strong>Guest Mode:</strong> You can pay with cash or card. To save cards for future use, please{' '}
+                    <button
+                      onClick={() => navigate('/login')}
+                      className="font-semibold underline hover:text-blue-900"
+                    >
+                      sign in
+                    </button>.
                   </p>
                 </div>
               )}
@@ -508,7 +515,7 @@ const CustomerBilling = () => {
               </div>
 
               {/* Saved Cards Section - Only for authenticated users */}
-              {localStorage.getItem('token') && savedCards.length > 0 && !useNewCard && (
+              {isAuthenticated && savedCards.length > 0 && !useNewCard && (
                 <div className="mb-6">
                   <h4 className="text-md font-medium text-gray-700 mb-3">Saved Cards</h4>
                   <div className="space-y-2">
@@ -588,18 +595,65 @@ const CustomerBilling = () => {
                   <h4 className="text-md font-medium text-gray-700 mb-3">
                     {savedCards.length === 0 ? 'Card Payment' : 'New Card'}
                   </h4>
-                  <button
-                    onClick={() => {
-                      setShowAddCardModal(true);
-                    }}
-                    className="w-full p-4 border-2 rounded-lg flex items-center border-gray-200 hover:border-gray-300 transition-all"
-                  >
-                    <CreditCard className="w-6 h-6 mr-3 text-gray-400" />
-                    <div className="text-left">
-                      <p className="font-semibold text-gray-800">Add New Card</p>
-                      <p className="text-sm text-gray-600">Pay online with Stripe</p>
-                    </div>
-                  </button>
+                  {isAuthenticated ? (
+                    <button
+                      onClick={() => {
+                        setShowAddCardModal(true);
+                      }}
+                      className="w-full p-4 border-2 rounded-lg flex items-center border-gray-200 hover:border-gray-300 transition-all"
+                    >
+                      <CreditCard className="w-6 h-6 mr-3 text-gray-400" />
+                      <div className="text-left">
+                        <p className="font-semibold text-gray-800">Add New Card</p>
+                        <p className="text-sm text-gray-600">Pay online with Stripe</p>
+                      </div>
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => {
+                          setPaymentMethod('stripe');
+                          setSelectedCard(null);
+                        }}
+                        className={`w-full p-4 border-2 rounded-lg flex items-center transition-all mb-3 ${
+                          paymentMethod === 'stripe'
+                            ? 'border-blue-600 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <CreditCard className={`w-6 h-6 mr-3 ${
+                          paymentMethod === 'stripe' ? 'text-blue-600' : 'text-gray-400'
+                        }`} />
+                        <div className="text-left flex-1">
+                          <p className="font-semibold text-gray-800">Pay with Card</p>
+                          <p className="text-sm text-gray-600">One-time payment via Stripe</p>
+                        </div>
+                        {paymentMethod === 'stripe' && (
+                          <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-start">
+                          <AlertCircle className="w-4 h-4 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
+                          <div className="text-sm text-gray-700">
+                            <p className="mb-1">
+                              You'll enter your card details on the next step. Your card won't be saved.
+                            </p>
+                            <button
+                              onClick={() => navigate('/?login')}
+                              className="font-medium text-blue-600 hover:text-blue-700"
+                            >
+                              Log in to save cards
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
