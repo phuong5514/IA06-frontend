@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Home, ClipboardList, Receipt, ChefHat, FolderTree, FileText, Database, Users, LayoutGrid, BarChart3 } from 'lucide-react';
+import { Home, ClipboardList, Receipt, ChefHat, FolderTree, FileText, Users, LayoutGrid, BarChart3 } from 'lucide-react';
 
 export default function Navigation() {
   const location = useLocation();
@@ -72,10 +72,10 @@ export default function Navigation() {
             Menu Items
           </Link>
 
-          <Link to="/admin/menu-bulk-ops" className={linkClass('/admin/menu-bulk-ops')}>
+          {/* <Link to="/admin/menu-bulk-ops" className={linkClass('/admin/menu-bulk-ops')}>
             <Database className="w-5 h-5 mr-3" />
             Bulk Operations
-          </Link>
+          </Link> */}
 
           <Link to="/admin/staff-management" className={linkClass('/admin/staff-management')}>
             <Users className="w-5 h-5 mr-3" />
