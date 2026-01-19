@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import DashboardLayout from '../components/DashboardLayout';
 // import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import SystemStatsBoard from '../components/SystemStatsBoard';
+// import SystemStatsBoard from '../components/SystemStatsBoard';
 import AuditLogsViewer from '../components/AuditLogsViewer';
 import SystemConfiguration from '../components/SystemConfiguration';
 import { BarChart3, FileText, Settings } from 'lucide-react';
@@ -12,7 +12,7 @@ import { BarChart3, FileText, Settings } from 'lucide-react';
 export default function Dashboard() {
   const { user } = useAuth();
   // const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<'overview' | 'audit-logs' | 'system-config'>('overview');
+  const [activeView, setActiveView] = useState<'audit-logs' | 'system-config'>('audit-logs');
 
   // Example protected data query
   // const { data: profileData, isLoading } = useQuery({
@@ -32,7 +32,7 @@ export default function Dashboard() {
             {/* View Selector */}
             <div className="bg-white rounded-lg shadow mb-6 p-4">
               <div className="flex flex-wrap gap-3">
-                <button
+                {/* <button
                   onClick={() => setActiveView('overview')}
                   className={`px-6 py-3 rounded-lg font-medium transition-colors ${
                     activeView === 'overview'
@@ -42,7 +42,7 @@ export default function Dashboard() {
                 >
                   <BarChart3 className="inline w-5 h-5 mr-2" />
                   System Overview
-                </button>
+                </button> */}
                 <button
                   onClick={() => setActiveView('audit-logs')}
                   className={`px-6 py-3 rounded-lg font-medium transition-colors ${
@@ -71,7 +71,7 @@ export default function Dashboard() {
             </div>
 
             {/* Content based on active view */}
-            {activeView === 'overview' && <SystemStatsBoard />}
+            {/* {activeView === 'overview' && <SystemStatsBoard />} */}
             {activeView === 'audit-logs' && <AuditLogsViewer />}
             {activeView === 'system-config' && user?.role === 'super_admin' && <SystemConfiguration />}
           </div>
