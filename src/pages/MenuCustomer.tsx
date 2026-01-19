@@ -50,8 +50,7 @@ export default function MenuCustomer() {
   const { user } = useAuth();
   const { onOrderStatusChange, onOrderAccepted, onOrderRejected, isConnected } = useWebSocket();
   
-  // Set default section based on user login status
-  const [activeSection, setActiveSection] = useState<ViewSection>(user ? 'preferences' : 'explore');
+  const [activeSection, setActiveSection] = useState<ViewSection>('explore');
 
   // Update active section when user login status changes
   useEffect(() => {
@@ -415,27 +414,50 @@ export default function MenuCustomer() {
               )}
               
               {/* End Session Button - Only show if session is active */}
-              {isSessionActive && session && (
+              {(isSessionActive && session) ? (
                 <button
                   onClick={handleEndSession}
                   disabled={isEndingSession}
-                  className="bg-red-600/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg hover:bg-red-700/90 transition-colors border border-white/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="hidden md:flex bg-red-600/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg hover:bg-red-700/90 transition-colors border border-white/20 items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="End session and cancel incomplete orders"
                 >
                   <XCircle className="w-5 h-5" />
                   <span className="font-medium">{isEndingSession ? 'Ending...' : 'End Session'}</span>
                 </button>
+              ) : (
+                <button
+                  onClick={() => setShowQRScanner(true)}
+                  className="hidden md:flex bg-indigo-600/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg hover:bg-indigo-700/90 transition-colors border border-white/20 items-center gap-2"
+                >
+                  <QrCode className="w-5 h-5" />
+                  <span className="font-medium">Scan QR</span>
+                </button>
               )}
               
-              {/* Scan QR Button */}
+            </div>
+          </div>
+
+          {/* Floating Action Buttons for Mobile */}
+          <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-3 md:hidden">
+            {(isSessionActive && session) ? (
+              <button
+                onClick={handleEndSession}
+                disabled={isEndingSession}
+                className="h-16 w-16 bg-red-600 text-white p-3 rounded-full shadow-lg flex items-center justify-center hover:bg-red-700 transition-colors disabled:opacity-50"
+                title="End Session"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            ) : (
               <button
                 onClick={() => setShowQRScanner(true)}
-                className="bg-indigo-600/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg hover:bg-indigo-700/90 transition-colors border border-white/20 flex items-center gap-2"
+                className="h-16 w-16 bg-indigo-600 text-white p-4 rounded-full shadow-xl flex items-center justify-center hover:bg-indigo-700 transition-colors"
+                title="Scan QR"
               >
-                <QrCode className="w-5 h-5" />
-                <span className="font-medium">Scan QR</span>
+                <QrCode className="w-6 h-6" />
               </button>
-            </div>
+            )}
+            
           </div>
 
           {/* QR Scanner Modal */}

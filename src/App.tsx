@@ -69,7 +69,10 @@ function App() {
               <TableSessionProvider>
                 <CartProvider>
                 <Toaster
-                  position="top-right"
+                  position="top-center"
+                  containerStyle={{
+                    top: 80,
+                  }}
                   toastOptions={{
                     duration: 4000,
                     style: {
