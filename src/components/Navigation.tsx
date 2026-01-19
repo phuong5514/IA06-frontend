@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Home, ClipboardList, Receipt, ChefHat, FolderTree, FileText, Database, Users, LayoutGrid, BarChart3 } from 'lucide-react';
+import { Home, ClipboardList, Receipt, ChefHat, FolderTree, FileText, Users, LayoutGrid, BarChart3 } from 'lucide-react';
 
 export default function Navigation() {
   const location = useLocation();
