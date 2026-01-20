@@ -96,7 +96,7 @@ export default function QRScannerModal({ isOpen, onClose, onSuccess }: QRScanner
 
       if (response.data && response.data.table_id) {
         // Start the table session
-        startSession(response.data.table_id, response.data.table_number);
+        startSession(response.data.table_id, response.data.table_number, response.data.session_id);
 
         // Show success message
         setTimeout(() => {
