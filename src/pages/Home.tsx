@@ -15,7 +15,7 @@ function Home({ onOpenSignIn, onOpenSignUp }: HomeProps) {
   const { branding } = useSettings();
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] pt-16 text-center px-4">
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] mt-16 text-center px-4">
       <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
         Welcome to {branding.restaurantName}
       </h1>
