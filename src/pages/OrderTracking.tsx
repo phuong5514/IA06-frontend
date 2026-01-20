@@ -304,7 +304,7 @@ export default function OrderTracking() {
               {/* Mobile: simple list, Desktop: timeline */}
               <div className="block md:hidden">
                 <ul className="space-y-2">
-                  {getStatusSteps().map((step, index) => (
+                  {getStatusSteps().map((step) => (
                     <li key={step.key} className={`flex items-center px-3 py-2 rounded-lg ${step.active ? 'bg-blue-100 text-blue-800 font-semibold' : step.completed ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500'}`}>
                       <span className="text-sm flex-1">{step.label}</span>
                       {step.completed && (
