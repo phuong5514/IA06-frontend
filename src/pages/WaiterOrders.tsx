@@ -61,7 +61,16 @@ export default function WaiterOrders() {
       const response = await apiClient.get('/orders/waiter/all', {
         params: { status: statusFilter },
       });
-      setOrders(response.data.orders || []);
+      const fetchedOrders = response.data.orders || [];
+      
+      // Debug: Log the first order to check date format
+      if (fetchedOrders.length > 0) {
+        console.log('Sample order created_at:', fetchedOrders[0].created_at);
+        console.log('Parsed date:', new Date(fetchedOrders[0].created_at));
+        console.log('Current time:', new Date());
+      }
+      
+      setOrders(fetchedOrders);
     } catch (err: any) {
       console.error('Failed to fetch orders:', err);
       setError(err.response?.data?.message || 'Failed to load orders');
@@ -91,12 +100,19 @@ export default function WaiterOrders() {
       return;
     }
 
+    // Wait for user data to be loaded before checking role
+    if (!user) {
+      return; // User data not loaded yet
+    }
+
     // Check if user has waiter role
-    if (user?.role !== 'waiter' && user?.role !== 'admin' && user?.role !== 'super_admin') {
+    if (user.role !== 'waiter' && user.role !== 'admin' && user.role !== 'super_admin') {
+      toast.error('Access denied. Waiter/Admin access required.');
       navigate('/');
       return;
     }
 
+    // Only fetch orders once user is authenticated and authorized
     fetchOrders();
     fetchOrderCounts();
   }, [isAuthenticated, user, statusFilter, fetchOrders, fetchOrderCounts, navigate]);
@@ -246,10 +262,21 @@ export default function WaiterOrders() {
   };
 
   const getTimeAgo = (dateString: string) => {
+    // Backend sends dates in ISO 8601 format (UTC)
+    // JavaScript automatically converts to local timezone when parsing
     const date = new Date(dateString);
+    
+    // Validate the date
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date string:', dateString);
+      return 'Unknown';
+    }
+    
     const now = new Date();
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
+    // Prevent negative values
+    if (seconds < 0) return 'Just now';
     if (seconds < 60) return 'Just now';
     if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
@@ -257,9 +284,24 @@ export default function WaiterOrders() {
   };
 
   const getWaitTime = (dateString: string): number => {
+    // Parse date string - backend sends in UTC format
+    // JavaScript Date constructor automatically handles ISO 8601 strings correctly
     const date = new Date(dateString);
     const now = new Date();
-    return Math.floor((now.getTime() - date.getTime()) / (1000 * 60)); // minutes
+    
+    // Validate the date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date string:', dateString);
+      return 0;
+    }
+    
+    // Calculate difference in milliseconds then convert to minutes
+    // Both dates are in local timezone after parsing, so this works correctly
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    
+    // Prevent negative values (future dates)
+    return Math.max(0, diffMinutes);
   };
 
   const getPriorityLevel = (order: WaiterOrder): { level: 'high' | 'medium' | 'low'; color: string; icon: React.ReactElement } => {
@@ -492,7 +534,7 @@ export default function WaiterOrders() {
                         </div>
 
                         <div className="space-y-1">
-                          {order.status === 'pending' && (
+                          {order.status === 'pending' && (user?.role === 'waiter' || user?.role === 'admin' || user?.role === 'super_admin') && (
                             <div className="flex gap-2">
                               <button
                                 onClick={() => handleAcceptOrder(order.id)}
@@ -699,7 +741,7 @@ export default function WaiterOrders() {
 
                     {/* Action Buttons */}
                     <div className="space-y-2">
-                      {order.status === 'pending' && (
+                      {order.status === 'pending' && (user?.role === 'waiter' || user?.role === 'admin' || user?.role === 'super_admin') && (
                         <>
                           <button
                             onClick={() => handleAcceptOrder(order.id)}
