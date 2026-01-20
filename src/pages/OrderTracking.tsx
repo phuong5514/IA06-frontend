@@ -58,10 +58,6 @@ export default function OrderTracking() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/');
-      return;
-    }
     if (orderId) {
       fetchOrder(orderId);
     }
