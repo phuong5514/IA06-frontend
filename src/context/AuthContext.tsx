@@ -70,8 +70,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Store access token in memory
         tokenManager.setAccessToken(data.accessToken);
         
-        // Set user data
-        setUser({ email: data.email });
+        // Fetch user profile immediately to get role information
+        try {
+          const userResponse = await apiClient.get(API_ENDPOINTS.ME);
+          const userData = userResponse.data.user;
+          setUser(userData);
+        } catch (error) {
+          console.error('Failed to fetch user profile:', error);
+          // Fallback to basic user data
+          setUser({ email: data.email });
+        }
         
         // Transfer guest session data if it exists
         const transferResult = await transferGuestSession();
@@ -79,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           toast.success(`Welcome back! ${transferResult.ordersTransferred} order(s) from your guest session have been transferred.`);
         }
         
-        // Refetch user profile
+        // Invalidate queries to ensure fresh data
         queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
         queryClient.invalidateQueries({ queryKey: ['user', 'orders'] });
         

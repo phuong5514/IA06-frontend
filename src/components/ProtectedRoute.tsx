@@ -10,10 +10,20 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
+  // Show loading while auth is being checked
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
         <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  // If user is authenticated but role hasn't loaded yet, show loading
+  if (isAuthenticated && requiredRoles && requiredRoles.length > 0 && !user?.role) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
+        <div className="text-white text-xl">Loading user data...</div>
       </div>
     );
   }
