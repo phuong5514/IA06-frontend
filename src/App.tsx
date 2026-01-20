@@ -218,17 +218,13 @@ function App() {
             <Route
               path="/orders/:orderId"
               element={
-                <ProtectedRoute>
-                  <OrderTracking />
-                </ProtectedRoute>
+                <OrderTracking />
               }
             />
             <Route
               path="/orders"
               element={
-                <ProtectedRoute>
-                  <Orders />
-                </ProtectedRoute>
+                <Orders />
               }
             />
             <Route
