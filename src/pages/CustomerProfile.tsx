@@ -373,17 +373,17 @@ export default function CustomerProfile() {
       case 'profile':
         return (
           <div className="space-y-6">
-            <div className="flex items-center gap-6 mb-6">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 mb-6">
               {/* Profile Picture */}
-              <div className="relative">
+              <div className="relative flex-shrink-0">
                 {profileImagePreview ? (
                   <img
                     src={profileImagePreview}
                     alt="Profile"
-                    className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-white shadow-lg"
                   />
                 ) : (
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold border-4 border-white shadow-lg">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl sm:text-3xl font-bold border-4 border-white shadow-lg">
                     {user?.email?.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -405,7 +405,7 @@ export default function CustomerProfile() {
               </div>
 
               {/* Profile Info */}
-              <div className="flex-1">
+              <div className="flex-1 text-center sm:text-left w-full">
                 {isEditingProfile ? (
                   <div className="space-y-3">
                     <input
@@ -413,24 +413,24 @@ export default function CustomerProfile() {
                       value={editedName}
                       onChange={(e) => setEditedName(e.target.value)}
                       placeholder="Your name"
-                      className="w-full text-2xl font-bold text-gray-800 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none bg-transparent"
+                      className="w-full text-lg sm:text-2xl font-bold text-gray-800 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none bg-transparent"
                     />
                     <input
                       type="tel"
                       value={editedPhone}
                       onChange={(e) => setEditedPhone(e.target.value)}
                       placeholder="Phone number"
-                      className="w-full text-gray-600 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none bg-transparent"
+                      className="w-full text-sm sm:text-base text-gray-600 border-b-2 border-indigo-300 focus:border-indigo-600 outline-none bg-transparent"
                     />
                   </div>
                 ) : (
                   <>
-                    <h2 className="text-2xl font-bold text-gray-800">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-800 break-words">
                       {profileData?.user?.name || 'Guest User'}
                     </h2>
-                    <p className="text-gray-600">{user?.email}</p>
+                    <p className="text-sm sm:text-base text-gray-600 break-all">{user?.email}</p>
                     {profileData?.user?.phone && (
-                      <p className="text-gray-500 text-sm mt-1">{profileData.user.phone}</p>
+                      <p className="text-gray-500 text-xs sm:text-sm mt-1">{profileData.user.phone}</p>
                     )}
                   </>
                 )}
@@ -440,24 +440,24 @@ export default function CustomerProfile() {
               {!isEditingProfile ? (
                 <button
                   onClick={() => setIsEditingProfile(true)}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                  className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
                 >
                   <Edit className="w-4 h-4" />
                   Edit
                 </button>
               ) : (
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   <button
                     onClick={handleSaveProfile}
                     disabled={updateProfileMutation.isPending}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm sm:text-base"
                   >
                     {updateProfileMutation.isPending ? 'Saving...' : 'Save'}
                   </button>
                   <button
                     onClick={handleCancelEdit}
                     disabled={updateProfileMutation.isPending}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50 text-sm sm:text-base"
                   >
                     Cancel
                   </button>
@@ -488,12 +488,12 @@ export default function CustomerProfile() {
 
             {/* Change Password Section */}
             <div className="mt-6 border-t pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">Security</h3>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-800">Security</h3>
                 {!showChangePassword && (
                   <button
                     onClick={() => setShowChangePassword(true)}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+                    className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
                   >
                     Change Password
                   </button>
@@ -553,11 +553,11 @@ export default function CustomerProfile() {
                     </div>
                   )}
 
-                  <div className="flex gap-3 pt-2">
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
                     <button
                       onClick={handleChangePassword}
                       disabled={changingPassword}
-                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                     >
                       {changingPassword ? 'Changing...' : 'Update Password'}
                     </button>
@@ -570,7 +570,7 @@ export default function CustomerProfile() {
                         setPasswordError('');
                       }}
                       disabled={changingPassword}
-                      className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50"
+                      className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50 text-sm sm:text-base"
                     >
                       Cancel
                     </button>
@@ -656,12 +656,12 @@ export default function CustomerProfile() {
         return (
           <div className="space-y-6">
             {/* Search, Filter, and Sort Controls */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-gray-800 mb-4">Order Management</h3>
+            <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-sm">
+              <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4">Order Management</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {/* Search */}
-                <div className="lg:col-span-2">
+                <div className="sm:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Search Orders
                   </label>
@@ -691,13 +691,13 @@ export default function CustomerProfile() {
 
                 {/* Status Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                     Status
                   </label>
                   <select
                     value={orderStatusFilter}
                     onChange={(e) => setOrderStatusFilter(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="all">All Orders</option>
                     <option value="paid">Paid Only</option>
@@ -707,13 +707,13 @@ export default function CustomerProfile() {
 
                 {/* Sort By */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                     Sort By
                   </label>
                   <select
                     value={orderSortBy}
                     onChange={(e) => setOrderSortBy(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="date-desc">Newest First</option>
                     <option value="date-asc">Oldest First</option>
@@ -724,11 +724,11 @@ export default function CustomerProfile() {
               </div>
 
               {/* Results Summary */}
-              <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+              <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs sm:text-sm text-gray-600">
                 <span>
                   Showing {totalItems === 0 ? 0 : startIndex + 1} - {Math.min(endIndex, totalItems)} of {totalItems} orders
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <span>Per page:</span>
                   <select
                     value={itemsPerPage}
@@ -758,19 +758,19 @@ export default function CustomerProfile() {
               {unpaidOrders.length === 0 ? (
                 <p className="text-gray-600 bg-gray-50 p-4 rounded-lg">No unpaid orders</p>
               ) : (
-                <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-6 hover:shadow-lg transition-shadow">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <p className="font-bold text-2xl text-gray-800">Combined Bill</p>
-                      <p className="text-sm text-gray-600 mt-1">
+                <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 sm:p-6 hover:shadow-lg transition-shadow">
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-0 mb-4">
+                    <div className="flex-1">
+                      <p className="font-bold text-xl sm:text-2xl text-gray-800">Combined Bill</p>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1">
                         {unpaidOrders.length} unpaid {unpaidOrders.length === 1 ? 'order' : 'orders'}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 mt-1 break-words">
                         Orders: {unpaidOrders.map((o: Order) => `#${o.id}`).join(', ')}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-3xl font-bold text-orange-600">
+                    <div className="text-left sm:text-right w-full sm:w-auto">
+                      <p className="text-2xl sm:text-3xl font-bold text-orange-600">
                         ${aggregatedUnpaidTotal.toFixed(2)}
                       </p>
                       <span className="inline-block mt-2 px-3 py-1 bg-orange-200 text-orange-800 text-xs rounded-full font-medium">
@@ -779,14 +779,14 @@ export default function CustomerProfile() {
                     </div>
                   </div>
                   <div className="space-y-2 border-t-2 border-orange-300 pt-4 mb-4">
-                    <p className="text-sm font-semibold text-gray-700 mb-2">All Items:</p>
+                    <p className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">All Items:</p>
                     {allUnpaidItems.map((item: any, index: number) => (
-                      <div key={`${item.orderId}-${item.id}-${index}`} className="flex justify-between text-sm">
-                        <span className="text-gray-700">
+                      <div key={`${item.orderId}-${item.id}-${index}`} className="flex justify-between gap-2 text-xs sm:text-sm">
+                        <span className="text-gray-700 flex-1">
                           {item.quantity}x {item.menuItem.name}
-                          <span className="text-xs text-gray-500 ml-2">(Order #{item.orderId})</span>
+                          <span className="text-xs text-gray-500 ml-1 sm:ml-2">(Order #{item.orderId})</span>
                         </span>
-                        <span className="font-medium text-gray-900">
+                        <span className="font-medium text-gray-900 whitespace-nowrap">
                           ${parseFloat(item.unit_price).toFixed(2)}
                         </span>
                       </div>
@@ -794,7 +794,7 @@ export default function CustomerProfile() {
                   </div>
                   <button
                     onClick={() => navigate('/billing')}
-                    className="w-full bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 transition-colors font-bold text-lg shadow-md"
+                    className="w-full bg-orange-600 text-white py-2 sm:py-3 rounded-lg hover:bg-orange-700 transition-colors font-bold text-base sm:text-lg shadow-md"
                   >
                     Pay ${aggregatedUnpaidTotal.toFixed(2)} Now →
                   </button>
@@ -849,12 +849,12 @@ export default function CustomerProfile() {
                     {paginatedOrders.map((order: Order) => (
                       <div
                         key={order.id}
-                        className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                        className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow"
                       >
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <p className="font-bold text-lg text-gray-800">Order #{order.id}</p>
-                            <p className="text-sm text-gray-600">
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-2 sm:gap-0 mb-3">
+                          <div className="flex-1">
+                            <p className="font-bold text-base sm:text-lg text-gray-800">Order #{order.id}</p>
+                            <p className="text-xs sm:text-sm text-gray-600">
                               {new Date(order.created_at).toLocaleString()}
                             </p>
                             {order.payment && (
@@ -863,8 +863,8 @@ export default function CustomerProfile() {
                               </p>
                             )}
                           </div>
-                          <div className="text-right">
-                            <p className="text-2xl font-bold text-gray-800">
+                          <div className="text-left sm:text-right w-full sm:w-auto">
+                            <p className="text-xl sm:text-2xl font-bold text-gray-800">
                               ${parseFloat(order.total_amount).toFixed(2)}
                             </p>
                             <span className={`inline-block px-3 py-1 text-xs rounded-full font-medium ${
@@ -878,8 +878,8 @@ export default function CustomerProfile() {
                         </div>
                         <div className="space-y-2 border-t border-gray-200 pt-3">
                           {order.items.map((item) => (
-                            <div key={item.id} className="flex justify-between text-sm">
-                              <span className="text-gray-700">
+                            <div key={item.id} className="flex justify-between gap-2 text-xs sm:text-sm">
+                              <span className="text-gray-700 flex-1">
                                 {item.quantity}x {item.menuItem.name}
                               </span>
                               <span className="font-medium text-gray-900">
@@ -893,15 +893,14 @@ export default function CustomerProfile() {
                   </div>
 
                   {/* Pagination Controls */}
-                  {totalPages > 1 && (
-                    <div className="mt-6 flex items-center justify-center gap-2">
+                  <div className="mt-6 flex flex-wrap items-center justify-center gap-1 sm:gap-2">
                       <button
                         onClick={() => setCurrentPage(1)}
                         disabled={currentPage === 1}
-                        className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         title="First page"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
                         </svg>
                       </button>
@@ -909,9 +908,10 @@ export default function CustomerProfile() {
                       <button
                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                         disabled={currentPage === 1}
-                        className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="px-2 sm:px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        Previous
+                        <span className="hidden sm:inline">Previous</span>
+                        <span className="sm:hidden">Prev</span>
                       </button>
                       
                       <div className="flex items-center gap-1">
@@ -929,7 +929,7 @@ export default function CustomerProfile() {
                               )}
                               <button
                                 onClick={() => setCurrentPage(page)}
-                                className={`px-4 py-2 rounded-lg transition-colors ${
+                                className={`px-2 sm:px-4 py-2 text-xs sm:text-sm rounded-lg transition-colors min-w-[2rem] sm:min-w-[2.5rem] ${
                                   currentPage === page
                                     ? 'bg-indigo-600 text-white font-bold'
                                     : 'border border-gray-300 hover:bg-gray-50'
@@ -944,7 +944,7 @@ export default function CustomerProfile() {
                       <button
                         onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                         disabled={currentPage === totalPages}
-                        className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="px-2 sm:px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         Next
                       </button>
@@ -952,15 +952,14 @@ export default function CustomerProfile() {
                       <button
                         onClick={() => setCurrentPage(totalPages)}
                         disabled={currentPage === totalPages}
-                        className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         title="Last page"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
                         </svg>
                       </button>
                     </div>
-                  )}
                 </>
               )}
             </div>
@@ -1045,14 +1044,14 @@ export default function CustomerProfile() {
       case 'payments':
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-blue-600" />
-                <h3 className="text-xl font-bold text-gray-800">Saved Payment Methods</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-gray-800">Saved Payment Methods</h3>
               </div>
               <button
                 onClick={() => setShowAddCard(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
               >
                 <Plus className="w-4 h-4" />
                 Add Card
@@ -1066,14 +1065,14 @@ export default function CustomerProfile() {
                 {paymentMethodsData.paymentMethods.map((method: PaymentMethod) => (
                   <div
                     key={method.id}
-                    className={`border rounded-lg p-4 ${
+                    className={`border rounded-lg p-3 sm:p-4 ${
                       method.is_default
                         ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200 bg-white'
                     }`}
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+                      <div className="flex items-center gap-3 sm:gap-4 flex-1">
                         <div className="w-12 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white font-bold text-xs">
                           {method.card_brand.toUpperCase()}
                         </div>
@@ -1091,12 +1090,12 @@ export default function CustomerProfile() {
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 w-full sm:w-auto justify-end">
                         {!method.is_default && (
                           <button
                             onClick={() => setDefaultPaymentMethodMutation.mutate(method.id)}
                             disabled={setDefaultPaymentMethodMutation.isPending}
-                            className="text-blue-600 hover:text-blue-700 text-sm font-medium disabled:opacity-50"
+                            className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium disabled:opacity-50 whitespace-nowrap"
                           >
                             Set Default
                           </button>
@@ -1104,7 +1103,7 @@ export default function CustomerProfile() {
                         <button
                           onClick={() => deletePaymentMethodMutation.mutate(method.id)}
                           disabled={deletePaymentMethodMutation.isPending}
-                          className="text-red-600 hover:text-red-700 disabled:opacity-50"
+                          className="text-red-600 hover:text-red-700 disabled:opacity-50 p-1"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1124,8 +1123,8 @@ export default function CustomerProfile() {
             )}
 
             {showAddCard && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
                   <h3 className="text-xl font-bold text-gray-800 mb-4">Add Payment Method</h3>
                   <Elements stripe={stripePromise}>
                     <AddCardForm 
@@ -1154,57 +1153,59 @@ export default function CustomerProfile() {
 
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-xl overflow-hidden">
-          <div className="border-b border-gray-200">
-            <nav className="flex">
+          <div className="border-b border-gray-200 overflow-x-auto">
+            <nav className="flex min-w-max sm:min-w-0">
               <button
                 onClick={() => setActiveTab('profile')}
-                className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${
+                className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   activeTab === 'profile'
                     ? 'border-b-2 border-indigo-600 text-indigo-600 bg-indigo-50'
                     : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                 }`}
               >
-                <User className="w-5 h-5" />
-                Profile
+                <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden xs:inline">Profile</span>
+                <span className="xs:hidden">Profile</span>
               </button>
               <button
                 onClick={() => setActiveTab('orders')}
-                className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${
+                className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   activeTab === 'orders'
                     ? 'border-b-2 border-indigo-600 text-indigo-600 bg-indigo-50'
                     : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                 }`}
               >
-                <Receipt className="w-5 h-5" />
+                <Receipt className="w-4 h-4 sm:w-5 sm:h-5" />
                 Orders
               </button>
               <button
                 onClick={() => setActiveTab('preferences')}
-                className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${
+                className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   activeTab === 'preferences'
                     ? 'border-b-2 border-indigo-600 text-indigo-600 bg-indigo-50'
                     : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                 }`}
               >
-                <Heart className="w-5 h-5" />
+                <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
                 Preferences
               </button>
               <button
                 onClick={() => setActiveTab('payments')}
-                className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${
+                className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   activeTab === 'payments'
                     ? 'border-b-2 border-indigo-600 text-indigo-600 bg-indigo-50'
                     : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                 }`}
               >
-                <CreditCard className="w-5 h-5" />
-                Payment Methods
+                <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">Payment Methods</span>
+                <span className="sm:hidden">Payments</span>
               </button>
             </nav>
           </div>
 
           {/* Tab Content */}
-          <div className="p-6">{renderTabContent()}</div>
+          <div className="p-4 sm:p-6">{renderTabContent()}</div>
         </div>
       </div>
     </div>
@@ -1299,11 +1300,11 @@ function AddCardForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel:
         </div>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <button
           type="submit"
           disabled={!stripe || processing}
-          className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+          className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm sm:text-base"
         >
           {processing ? (
             <>
@@ -1318,7 +1319,7 @@ function AddCardForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel:
           type="button"
           onClick={onCancel}
           disabled={processing}
-          className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium disabled:opacity-50"
+          className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base"
         >
           Cancel
         </button>

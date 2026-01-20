@@ -29,17 +29,35 @@ export default function QRLanding() {
       }
 
       try {
-        const response = await apiClient.get<TableInfo>(
+        // Verify QR token and get table info
+        const verifyResponse = await apiClient.get<TableInfo>(
           `/tables/verify/${token}`
         );
 
-        setTableInfo(response.data);
+        setTableInfo(verifyResponse.data);
+
+        // Generate a unique session ID for this guest session
+        const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        // Store session info in sessionStorage (cleared when tab closes)
+        const sessionData = {
+          tableId: verifyResponse.data.table_id,
+          tableNumber: verifyResponse.data.table_number,
+          sessionId: sessionId,
+          isGuest: true,
+          startedAt: new Date().toISOString(),
+        };
+        
+        // Use sessionStorage instead of localStorage (cleared when tab closes)
+        sessionStorage.setItem('tableSession', JSON.stringify(sessionData));
+        
+        console.log('✅ Guest session created:', sessionData);
         setLoading(false);
 
-        // Redirect to menu after a short delay
+        // Small delay to show success message, then redirect
         setTimeout(() => {
-          navigate(`/menu?table=${response.data.table_id}`);
-        }, 1500);
+          navigate(`/menu?table=${verifyResponse.data.table_id}&session=${sessionId}`);
+        }, 500);
       } catch (err: any) {
         setLoading(false);
         if (err.response?.data?.message) {
@@ -82,7 +100,7 @@ export default function QRLanding() {
           </div>
         )}
 
-        {!loading && tableInfo && (
+        {!loading && tableInfo && !error && (
           <div className="text-center">
             <div className="bg-green-100 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
               <Check className="h-8 w-8 text-green-600" />

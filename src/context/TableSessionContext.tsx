@@ -1,15 +1,18 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import toast from 'react-hot-toast';
 
 interface TableSession {
   tableId: number;
   tableNumber: string;
+  sessionId: string;
   startedAt: string;
+  isGuest: boolean;
 }
 
 interface TableSessionContextType {
   session: TableSession | null;
-  startSession: (tableId: number, tableNumber: string) => void;
+  startSession: (tableId: number, tableNumber: string, sessionId: string) => void;
   endSession: () => void;
   isSessionActive: boolean;
 }
@@ -18,31 +21,44 @@ const TableSessionContext = createContext<TableSessionContextType | undefined>(u
 
 export function TableSessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<TableSession | null>(() => {
-    // Load session from localStorage on initialization
-    const savedSession = localStorage.getItem('tableSession');
-    return savedSession ? JSON.parse(savedSession) : null;
+    // Load session from sessionStorage (guest-only sessions)
+    const savedSession = sessionStorage.getItem('tableSession');
+    if (savedSession) {
+      try {
+        return JSON.parse(savedSession);
+      } catch (error) {
+        console.error('Failed to parse saved session:', error);
+        return null;
+      }
+    }
+    return null;
   });
 
-  // Save session to localStorage whenever it changes
+  // Save session to sessionStorage whenever it changes
   useEffect(() => {
     if (session) {
-      localStorage.setItem('tableSession', JSON.stringify(session));
+      sessionStorage.setItem('tableSession', JSON.stringify(session));
     } else {
-      localStorage.removeItem('tableSession');
+      sessionStorage.removeItem('tableSession');
     }
   }, [session]);
 
-  const startSession = (tableId: number, tableNumber: string) => {
+  const startSession = (tableId: number, tableNumber: string, sessionId: string) => {
     const newSession: TableSession = {
       tableId,
       tableNumber,
+      sessionId,
       startedAt: new Date().toISOString(),
+      isGuest: true,
     };
     setSession(newSession);
   };
 
   const endSession = () => {
+    // Simply clear local session data (no backend call needed)
     setSession(null);
+    sessionStorage.removeItem('tableSession');
+    toast.success('Session ended successfully.');
   };
 
   const isSessionActive = session !== null;

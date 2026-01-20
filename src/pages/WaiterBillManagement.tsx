@@ -37,7 +37,7 @@ interface Payment {
     id: string;
     name: string;
     email: string;
-  };
+  } | null;
   orders: Order[];
 }
 
@@ -184,7 +184,9 @@ const WaiterBillManagement = () => {
                   </div>
                   <div className="flex items-center text-gray-700">
                     <User className="w-4 h-4 mr-2" />
-                    <span className="font-medium">{payment.user.name || payment.user.email}</span>
+                    <span className="font-medium">
+                      {payment.user ? (payment.user.name || payment.user.email) : 'Guest Customer'}
+                    </span>
                   </div>
                   <div className="flex items-center text-gray-600 text-sm mt-1">
                     <Clock className="w-4 h-4 mr-2" />
@@ -268,7 +270,7 @@ const WaiterBillManagement = () => {
 
       {/* Cash Payment Confirmation Modal */}
       {selectedPayment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">
               Confirm Cash Payment
@@ -281,7 +283,9 @@ const WaiterBillManagement = () => {
               </div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-gray-700">Customer:</span>
-                <span className="font-semibold">{selectedPayment.user.name || selectedPayment.user.email}</span>
+                <span className="font-semibold">
+                  {selectedPayment.user ? (selectedPayment.user.name || selectedPayment.user.email) : 'Guest Customer'}
+                </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-700">Amount:</span>

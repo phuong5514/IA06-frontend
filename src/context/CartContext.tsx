@@ -38,28 +38,28 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => {
-    // Load cart from localStorage on initialization
-    const savedCart = localStorage.getItem('cart');
+    // Load cart from sessionStorage (cleared when tab closes)
+    const savedCart = sessionStorage.getItem('cart');
     return savedCart ? JSON.parse(savedCart) : [];
   });
 
   const [tableId, setTableId] = useState<number | null>(() => {
-    // Load table ID from localStorage on initialization
-    const savedTableId = localStorage.getItem('cartTableId');
+    // Load table ID from sessionStorage
+    const savedTableId = sessionStorage.getItem('cartTableId');
     return savedTableId ? JSON.parse(savedTableId) : null;
   });
 
-  // Save cart to localStorage whenever it changes
+  // Save cart to sessionStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(items));
+    sessionStorage.setItem('cart', JSON.stringify(items));
   }, [items]);
 
-  // Save table ID to localStorage whenever it changes
+  // Save table ID to sessionStorage whenever it changes
   useEffect(() => {
     if (tableId !== null) {
-      localStorage.setItem('cartTableId', JSON.stringify(tableId));
+      sessionStorage.setItem('cartTableId', JSON.stringify(tableId));
     } else {
-      localStorage.removeItem('cartTableId');
+      sessionStorage.removeItem('cartTableId');
     }
   }, [tableId]);
 

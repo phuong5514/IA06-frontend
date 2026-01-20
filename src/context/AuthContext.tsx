@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { API_ENDPOINTS, apiClient, tokenManager } from '../config/api';
 import { tabSyncManager } from '../utils/tabSync';
+import { transferGuestSession } from '../utils/guestSessionTransfer';
+import toast from 'react-hot-toast';
 
 interface User {
   email: string;
@@ -47,22 +49,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [userData]);
 
+  // Watch for token changes and refetch user profile
+  // This is needed when a guest token is set after the component mounts
+  useEffect(() => {
+    const token = tokenManager.getAccessToken();
+    if (token && !user) {
+      // Token exists but no user data - refetch
+      refetchUser();
+    }
+  }, [user, refetchUser]);
+
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async ({ email, password }: { email: string; password: string }) => {
       const response = await apiClient.post(API_ENDPOINTS.LOGIN, { email, password });
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.success && data.accessToken) {
         // Store access token in memory
         tokenManager.setAccessToken(data.accessToken);
         
-        // Set user data
-        setUser({ email: data.email });
+        // Fetch user profile immediately to get role information
+        try {
+          const userResponse = await apiClient.get(API_ENDPOINTS.ME);
+          const userData = userResponse.data.user;
+          setUser(userData);
+        } catch (error) {
+          console.error('Failed to fetch user profile:', error);
+          // Fallback to basic user data
+          setUser({ email: data.email });
+        }
         
-        // Refetch user profile
+        // Transfer guest session data if it exists
+        const transferResult = await transferGuestSession();
+        if (transferResult && transferResult.ordersTransferred > 0) {
+          toast.success(`Welcome back! ${transferResult.ordersTransferred} order(s) from your guest session have been transferred.`);
+        }
+        
+        // Invalidate queries to ensure fresh data
         queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
+        queryClient.invalidateQueries({ queryKey: ['user', 'orders'] });
         
         // Broadcast login to other tabs
         tabSyncManager.broadcast({ type: 'login', timestamp: Date.now() });
@@ -79,10 +106,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await apiClient.post(API_ENDPOINTS.REGISTER, { email, password });
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (!data.success) {
         // Handle unsuccessful registration (backend returned success: false)
         throw new Error(data.message || 'Registration failed');
+      }
+      
+      // Note: Guest session will be transferred when user logs in after email verification
+      // We store a flag to show a message about session transfer after verification
+      const guestSessionStr = localStorage.getItem('guestSession');
+      if (guestSessionStr) {
+        localStorage.setItem('pendingGuestTransfer', 'true');
       }
     },
   });
@@ -90,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
+      // Perform logout request
       const response = await apiClient.post(API_ENDPOINTS.LOGOUT, {});
       return response.data;
     },
@@ -99,6 +134,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Clear user state
       setUser(null);
+      
+      // Clear session data (guest sessions are in sessionStorage, not localStorage)
+      sessionStorage.removeItem('tableSession');
+      sessionStorage.removeItem('cart');
+      sessionStorage.removeItem('guestOrders');
       
       // Clear all queries
       queryClient.clear();
