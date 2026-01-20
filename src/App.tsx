@@ -34,6 +34,7 @@ import Cart from './pages/Cart';
 import OrderTracking from './pages/OrderTracking';
 import Orders from './pages/Orders';
 import WaiterOrders from './pages/WaiterOrders';
+import SessionManagement from './pages/SessionManagement';
 import KitchenDisplay from './pages/KitchenDisplay';
 import CustomerBilling from './pages/CustomerBilling';
 import WaiterBillManagement from './pages/WaiterBillManagement';
@@ -68,7 +69,10 @@ function App() {
               <TableSessionProvider>
                 <CartProvider>
                 <Toaster
-                  position="top-right"
+                  position="top-center"
+                  containerStyle={{
+                    top: 80,
+                  }}
                   toastOptions={{
                     duration: 4000,
                     style: {
@@ -92,6 +96,12 @@ function App() {
                   }}
                 />
                 <Header onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
+                <AuthModal
+                  isOpen={isModalOpen}
+                  onClose={() => setIsModalOpen(false)}
+                  mode={modalMode}
+                  onSwitchMode={switchMode}
+                />
               <Routes>
             <Route
               path="/"
@@ -101,12 +111,6 @@ function App() {
                   style={{ backgroundImage: `url(${backgroundImage})` }}
                 >
                   <Home onOpenSignIn={openSignIn} onOpenSignUp={openSignUp} />
-                  <AuthModal
-                    isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
-                    mode={modalMode}
-                    onSwitchMode={switchMode}
-                  />
                 </div>
               }
             />
@@ -193,19 +197,11 @@ function App() {
             />
             <Route
               path="/menu/customer"
-              element={
-                <ProtectedRoute>
-                  <MenuCustomer />
-                </ProtectedRoute>
-              }
+              element={<MenuCustomer />}
             />
             <Route
               path="/menu/item/:id"
-              element={
-                <ProtectedRoute>
-                  <MenuItemDetail />
-                </ProtectedRoute>
-              }
+              element={<MenuItemDetail />}
             />
             <Route
               path="/profile"
@@ -217,11 +213,7 @@ function App() {
             />
             <Route
               path="/cart"
-              element={
-                <ProtectedRoute>
-                  <Cart />
-                </ProtectedRoute>
-              }
+              element={<Cart />}
             />
             <Route
               path="/orders/:orderId"
@@ -248,6 +240,14 @@ function App() {
               }
             />
             <Route
+              path="/waiter/sessions"
+              element={
+                <ProtectedRoute requiredRoles={['waiter', 'admin', 'super_admin']}>
+                  <SessionManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/kitchen/display"
               element={
                 <ProtectedRoute requiredRoles={['kitchen', 'admin', 'super_admin']}>
@@ -257,11 +257,7 @@ function App() {
             />
             <Route
               path="/billing"
-              element={
-                <ProtectedRoute>
-                  <CustomerBilling />
-                </ProtectedRoute>
-              }
+              element={<CustomerBilling />}
             />
             <Route
               path="/waiter/bills"

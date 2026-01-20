@@ -5,6 +5,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { CreditCard, Banknote, Receipt, ArrowLeft, Loader2, Cross, AlertCircle } from 'lucide-react';
 import { apiClient } from '../config/api';
+import { useAuth } from '../context/AuthContext';
 // import DashboardLayout from '../components/DashboardLayout';
 
 // Initialize Stripe
@@ -49,6 +50,7 @@ interface Payment {
 
 const CustomerBilling = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [billingInfo, setBillingInfo] = useState<BillingInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'stripe'>('cash');
@@ -63,8 +65,11 @@ const CustomerBilling = () => {
 
   useEffect(() => {
     fetchBillingInfo();
-    fetchSavedCards();
-  }, []);
+    // Only fetch saved cards if user is authenticated
+    if (isAuthenticated) {
+      fetchSavedCards();
+    }
+  }, [isAuthenticated]);
 
   const fetchSavedCards = async () => {
     try {
@@ -86,7 +91,48 @@ const CustomerBilling = () => {
   const fetchBillingInfo = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/payments/billing');
+      
+      // Check if user is authenticated
+      const token = localStorage.getItem('token');
+      
+      // Get sessionId from tableSession in sessionStorage
+      const tableSessionStr = sessionStorage.getItem('tableSession');
+      console.log('TableSession string:', tableSessionStr);
+      console.log('Has token:', !!token);
+      
+      // For authenticated users without a table session, fetch by userId (backend will use req.user.userId)
+      if (token && !tableSessionStr) {
+        console.log('Authenticated user without table session - fetching by userId');
+        // Pass empty sessionId, backend will use userId from token
+        const response = await apiClient.get('/payments/billing');
+        setBillingInfo(response.data);
+        setLoading(false);
+        return;
+      }
+      
+      if (!tableSessionStr) {
+        // No active session and not authenticated
+        console.log('No tableSession found in sessionStorage and not authenticated');
+        setBillingInfo({ orders: [], totalAmount: '0.00', unpaidOrders: [] });
+        setLoading(false);
+        return;
+      }
+      
+      const tableSession = JSON.parse(tableSessionStr);
+      const sessionId = tableSession.sessionId;
+      console.log('Parsed sessionId:', sessionId);
+      
+      if (!sessionId) {
+        // No sessionId in session
+        console.log('No sessionId found in tableSession');
+        setBillingInfo({ orders: [], totalAmount: '0.00', unpaidOrders: [] });
+        setLoading(false);
+        return;
+      }
+      
+      // Always fetch from backend using sessionId
+      console.log('Fetching billing info with sessionId:', sessionId);
+      const response = await apiClient.get(`/payments/billing?sessionId=${encodeURIComponent(sessionId)}`);
       setBillingInfo(response.data);
     } catch (error: any) {
       console.error('Error fetching billing info:', error);
@@ -105,13 +151,41 @@ const CustomerBilling = () => {
     try {
       setProcessingPayment(true);
       
+      const token = localStorage.getItem('token');
+      
+      // Get sessionId from tableSession
+      const tableSessionStr = sessionStorage.getItem('tableSession');
+      if (!tableSessionStr) {
+        toast.error('Session not found. Please scan QR code again.');
+        setProcessingPayment(false);
+        return;
+      }
+      
+      const tableSession = JSON.parse(tableSessionStr);
+      const sessionId = tableSession.sessionId;
+      
+      if (!sessionId) {
+        toast.error('Session ID not found. Please scan QR code again.');
+        setProcessingPayment(false);
+        return;
+      }
+      
+      // Guest users cannot use saved cards (only one-time payments)
+      if (!token && paymentMethod === 'stripe' && selectedCard) {
+        toast.error('Please sign in to use saved cards');
+        setProcessingPayment(false);
+        return;
+      }
+      
       // If paying with cash
       if (paymentMethod === 'cash') {
+        // Always use API with sessionId
         await apiClient.post(
           '/payments',
           {
             orderIds: billingInfo.unpaidOrders,
             paymentMethod,
+            sessionId,
           }
         );
         toast.success('Cash payment initiated. Please pay at the counter.');
@@ -126,13 +200,14 @@ const CustomerBilling = () => {
           toast.error('Selected card not found');
           return;
         }
-
+        
         // Create payment and charge using saved payment method
         const response = await apiClient.post(
           '/payments',
           {
             orderIds: billingInfo.unpaidOrders,
             paymentMethod: 'stripe',
+            sessionId,
           }
         );
 
@@ -186,6 +261,7 @@ const CustomerBilling = () => {
         {
           orderIds: billingInfo.unpaidOrders,
           paymentMethod: 'stripe',
+          sessionId,
         }
       );
 
@@ -327,10 +403,17 @@ const CustomerBilling = () => {
           <div className="bg-blue-600 text-white p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold flex items-center">
-                  <Receipt className="w-8 h-8 mr-3" />
-                  Your Bill
-                </h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-bold flex items-center">
+                    <Receipt className="w-8 h-8 mr-3" />
+                    Your Bill
+                  </h1>
+                  {!localStorage.getItem('token') && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-500 text-white">
+                      Guest Mode
+                    </span>
+                  )}
+                </div>
                 <p className="text-blue-100 mt-1">Review and pay for your orders</p>
               </div>
               <div className="text-right">
@@ -356,17 +439,23 @@ const CustomerBilling = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  {order.items.map((item) => (
-                    <div key={item.id} className="flex justify-between items-center text-sm">
-                      <div className="flex-1">
-                        <span className="text-gray-700">{item.menuItem.name}</span>
-                        <span className="text-gray-500 ml-2">× {item.quantity}</span>
+                  {order.items && order.items.length > 0 ? (
+                    order.items.map((item) => (
+                      <div key={item.id} className="flex justify-between items-center text-sm">
+                        <div className="flex-1">
+                          <span className="text-gray-700">{item.menuItem.name}</span>
+                          <span className="text-gray-500 ml-2">× {item.quantity}</span>
+                        </div>
+                        <span className="font-medium text-gray-800">
+                          ${item.total_price}
+                        </span>
                       </div>
-                      <span className="font-medium text-gray-800">
-                        ${item.total_price}
-                      </span>
+                    ))
+                  ) : (
+                    <div className="text-sm text-gray-500">
+                      Order details not available
                     </div>
-                  ))}
+                  )}
                 </div>
                 
                 <div className="mt-2 pt-2 border-t flex justify-between items-center">
@@ -379,6 +468,21 @@ const CustomerBilling = () => {
             {/* Payment Method Selection */}
             <div className="mt-8 pt-6 border-t">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Payment Method</h3>
+              
+              {/* Guest Mode Notice */}
+              {!isAuthenticated && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Guest Mode:</strong> You can pay with cash or card. To save cards for future use, please{' '}
+                    <button
+                      onClick={() => navigate('/login')}
+                      className="font-semibold underline hover:text-blue-900"
+                    >
+                      sign in
+                    </button>.
+                  </p>
+                </div>
+              )}
               
               {/* Cash Payment - Always Available */}
               <div className="mb-6">
@@ -410,8 +514,8 @@ const CustomerBilling = () => {
                 </button>
               </div>
 
-              {/* Saved Cards Section */}
-              {savedCards.length > 0 && !useNewCard && (
+              {/* Saved Cards Section - Only for authenticated users */}
+              {isAuthenticated && savedCards.length > 0 && !useNewCard && (
                 <div className="mb-6">
                   <h4 className="text-md font-medium text-gray-700 mb-3">Saved Cards</h4>
                   <div className="space-y-2">
@@ -491,18 +595,65 @@ const CustomerBilling = () => {
                   <h4 className="text-md font-medium text-gray-700 mb-3">
                     {savedCards.length === 0 ? 'Card Payment' : 'New Card'}
                   </h4>
-                  <button
-                    onClick={() => {
-                      setShowAddCardModal(true);
-                    }}
-                    className="w-full p-4 border-2 rounded-lg flex items-center border-gray-200 hover:border-gray-300 transition-all"
-                  >
-                    <CreditCard className="w-6 h-6 mr-3 text-gray-400" />
-                    <div className="text-left">
-                      <p className="font-semibold text-gray-800">Add New Card</p>
-                      <p className="text-sm text-gray-600">Pay online with Stripe</p>
-                    </div>
-                  </button>
+                  {isAuthenticated ? (
+                    <button
+                      onClick={() => {
+                        setShowAddCardModal(true);
+                      }}
+                      className="w-full p-4 border-2 rounded-lg flex items-center border-gray-200 hover:border-gray-300 transition-all"
+                    >
+                      <CreditCard className="w-6 h-6 mr-3 text-gray-400" />
+                      <div className="text-left">
+                        <p className="font-semibold text-gray-800">Add New Card</p>
+                        <p className="text-sm text-gray-600">Pay online with Stripe</p>
+                      </div>
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => {
+                          setPaymentMethod('stripe');
+                          setSelectedCard(null);
+                        }}
+                        className={`w-full p-4 border-2 rounded-lg flex items-center transition-all mb-3 ${
+                          paymentMethod === 'stripe'
+                            ? 'border-blue-600 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <CreditCard className={`w-6 h-6 mr-3 ${
+                          paymentMethod === 'stripe' ? 'text-blue-600' : 'text-gray-400'
+                        }`} />
+                        <div className="text-left flex-1">
+                          <p className="font-semibold text-gray-800">Pay with Card</p>
+                          <p className="text-sm text-gray-600">One-time payment via Stripe</p>
+                        </div>
+                        {paymentMethod === 'stripe' && (
+                          <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-start">
+                          <AlertCircle className="w-4 h-4 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
+                          <div className="text-sm text-gray-700">
+                            <p className="mb-1">
+                              You'll enter your card details on the next step. Your card won't be saved.
+                            </p>
+                            <button
+                              onClick={() => navigate('/?login')}
+                              className="font-medium text-blue-600 hover:text-blue-700"
+                            >
+                              Log in to save cards
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -544,7 +695,7 @@ const CustomerBilling = () => {
 
       {/* Add Card Modal */}
       {showAddCardModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-gray-800 mb-4">Add New Card</h3>
             <Elements stripe={stripePromise}>

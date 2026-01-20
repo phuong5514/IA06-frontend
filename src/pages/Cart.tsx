@@ -9,7 +9,7 @@ import { CheckCircle, ShoppingCart, Trash2, Edit } from 'lucide-react';
 export default function Cart() {
   const { items, removeItem, updateQuantity, clearCart, getTotalPrice, getItemPrice, tableId } = useCart();
   const { isAuthenticated } = useAuth();
-  const { session, endSession } = useTableSession();
+  const { session } = useTableSession();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,14 +31,15 @@ export default function Cart() {
   };
 
   const handleConfirmOrder = async () => {
-    if (!isAuthenticated) {
-      alert('Please sign in to place an order');
-      navigate('/');
+    if (items.length === 0) {
+      alert('Your cart is empty');
       return;
     }
 
-    if (items.length === 0) {
-      alert('Your cart is empty');
+    // Require table session for guest orders
+    if (!isAuthenticated && !session) {
+      alert('Please scan a QR code at your table to place an order');
+      navigate('/');
       return;
     }
 
@@ -61,22 +62,51 @@ export default function Cart() {
           })),
         })),
         ...(orderTableId && { table_id: orderTableId }), // Include table_id if available
+        ...(session?.sessionId && { session_id: session.sessionId }), // Include session_id for guest sessions
       };
 
-      // Submit the order to the backend
+      // Submit the order to the backend (works for both guest and authenticated users)
       const response = await apiClient.post('/orders', orderData);
 
       setSuccess(true);
-      clearCart();
       
-      // End the table session after successful order
-      if (session) {
-        endSession();
+      // Store order in session storage for guest users to track
+      if (!isAuthenticated && session) {
+        const guestOrders = JSON.parse(sessionStorage.getItem('guestOrders') || '[]');
+        guestOrders.push({
+          id: response.data.id,
+          session_id: session.sessionId,
+          table_id: session.tableId,
+          created_at: new Date().toISOString(),
+          status: 'pending',
+          total_amount: getTotalPrice().toString(),
+          items: items.map(item => ({
+            id: Math.random(), // Temporary ID for display
+            menu_item_id: item.menuItemId,
+            quantity: item.quantity,
+            unit_price: item.price.toString(),
+            total_price: getItemPrice(item).toString(),
+            menuItem: {
+              id: item.menuItemId,
+              name: item.name,
+              price: item.price.toString()
+            }
+          })),
+          items_count: items.length
+        });
+        sessionStorage.setItem('guestOrders', JSON.stringify(guestOrders));
       }
+      
+      clearCart();
 
       // Redirect to order tracking page after a short delay
       setTimeout(() => {
-        navigate(`/orders/${response.data.id}`);
+        if (isAuthenticated) {
+          navigate(`/orders/${response.data.id}`);
+        } else {
+          // For guests, redirect to a guest order tracking page or menu
+          navigate(`/menu?table=${orderTableId}&session=${session?.sessionId}`);
+        }
       }, 2000);
     } catch (err: any) {
       console.error('Order submission error:', err);

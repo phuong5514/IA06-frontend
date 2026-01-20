@@ -320,11 +320,10 @@ export default function StaffManagement() {
       </div>
 
       {/* Pagination */}
-      {totalStaff > 0 && (
-        <div className="flex items-center justify-between bg-white px-4 py-3 border-t border-gray-200 sm:px-6 mt-4">
+      <div className="flex items-center justify-between bg-white px-4 py-3 border-t border-gray-200 sm:px-6 mt-4">
           <div className="flex items-center">
             <div className="text-sm text-gray-700">
-              Showing {startIndex + 1} to {Math.min(endIndex, totalStaff)} of {totalStaff} staff members
+              Showing {totalStaff === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, totalStaff)} of {totalStaff} staff members
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -387,7 +386,6 @@ export default function StaffManagement() {
             </nav>
           </div>
         </div>
-      )}
 
       </div>
     </DashboardLayout>

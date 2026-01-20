@@ -2,6 +2,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import type { User } from '../context/AuthContext';
 import { BookOpen, ClipboardList, Settings } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
 
 type HomeProps = {
   onOpenSignIn: () => void;
@@ -11,11 +12,12 @@ type HomeProps = {
 function Home({ onOpenSignIn, onOpenSignUp }: HomeProps) {
   const { user } = useAuth() as { user: User | null };
   const navigate = useNavigate();
+  const { branding } = useSettings();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] pt-16 text-center px-4">
       <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
-        Welcome to Smart Restaurant
+        Welcome to {branding.restaurantName}
       </h1>
       {user ? (
         <div className="space-y-4">

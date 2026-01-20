@@ -234,7 +234,7 @@ export default function RevenueAnalytics() {
   const getDailyChartOption = (data: DailyActivity[]) => ({
     title: { text: 'Daily Revenue & Orders', left: 'center' },
     tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
-    legend: { data: ['Revenue', 'Total Orders', 'Completed', 'Cancelled'], top: 30 },
+    legend: { data: ['Revenue', 'Total Orders', 'Completed', 'Cancelled'], top: 40 },
     grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
     xAxis: { type: 'category', data: data.map(day => formatDate(day.date)), axisLabel: { rotate: 45 } },
     yAxis: [
