@@ -70,6 +70,15 @@ export default function KitchenDisplay() {
       });
       const fetchedOrders = response.data.orders || [];
       
+      // Debug: Log the first order to check date format
+      if (fetchedOrders.length > 0) {
+        console.log('Kitchen - Sample order created_at:', fetchedOrders[0].created_at);
+        console.log('Kitchen - Parsed date:', new Date(fetchedOrders[0].created_at));
+        console.log('Kitchen - Current time:', new Date());
+        const elapsed = Math.floor((new Date().getTime() - new Date(fetchedOrders[0].created_at).getTime()) / 1000);
+        console.log('Kitchen - Elapsed seconds:', elapsed);
+      }
+      
       // Initialize item statuses for new orders
       setItemStatuses(prev => {
         const newStatuses = new Map(prev);
@@ -147,8 +156,14 @@ export default function KitchenDisplay() {
       return;
     }
 
+    // Wait for user data to be loaded
+    if (!user) {
+      return; // User data not loaded yet
+    }
+
     // Check if user has kitchen role
-    if (user?.role !== 'kitchen' && user?.role !== 'admin' && user?.role !== 'super_admin') {
+    if (user.role !== 'kitchen' && user.role !== 'admin' && user.role !== 'super_admin') {
+      toast.error('Access denied. Kitchen staff access required.');
       navigate('/');
       return;
     }
@@ -266,8 +281,22 @@ export default function KitchenDisplay() {
   };
 
   const getOrderElapsedTime = (createdAt: string): number => {
+    // Parse date string - backend sends in UTC, JavaScript handles timezone conversion
     const created = new Date(createdAt);
-    return Math.floor((currentTime.getTime() - created.getTime()) / 1000);
+    
+    // Validate the date
+    if (isNaN(created.getTime())) {
+      console.warn('Invalid created_at date:', createdAt);
+      return 0;
+    }
+    
+    // Calculate elapsed time using current time
+    // Both timestamps are in the same timezone after parsing
+    const diffMs = currentTime.getTime() - created.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    
+    // Prevent negative values
+    return Math.max(0, diffSeconds);
   };
 
   const formatTimer = (seconds: number): string => {
