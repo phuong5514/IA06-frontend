@@ -258,7 +258,7 @@ export default function OrderTracking() {
             </svg>
             Back to Menu
           </button>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Order #{order.id}</h1>
               <p className="text-gray-600 mt-2">
@@ -301,42 +301,57 @@ export default function OrderTracking() {
           {/* Status Timeline */}
           {order.status !== 'cancelled' && order.status !== 'rejected' && (
             <div className="relative">
-              <div className="flex justify-between items-center">
-                {getStatusSteps().map((step, index) => (
-                  <div key={step.key} className="flex-1 relative">
-                    <div className="flex flex-col items-center">
-                      {/* Circle */}
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
-                          step.completed
-                            ? 'bg-green-500 border-green-500 text-white'
-                            : step.active
-                            ? 'bg-blue-500 border-blue-500 text-white animate-pulse'
-                            : 'bg-gray-200 border-gray-300 text-gray-500'
-                        }`}
-                      >
-                        {step.completed ? (
-                          <Check className="w-5 h-5" />
-                        ) : (
-                          <span className="text-sm">{index + 1}</span>
-                        )}
+              {/* Mobile: simple list, Desktop: timeline */}
+              <div className="block md:hidden">
+                <ul className="space-y-2">
+                  {getStatusSteps().map((step) => (
+                    <li key={step.key} className={`flex items-center px-3 py-2 rounded-lg ${step.active ? 'bg-blue-100 text-blue-800 font-semibold' : step.completed ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500'}`}>
+                      <span className="text-sm flex-1">{step.label}</span>
+                      {step.completed && (
+                        <Check className="w-4 h-4 ml-2 text-green-500" />
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="hidden md:block">
+                <div className="flex justify-between items-center">
+                  {getStatusSteps().map((step, index) => (
+                    <div key={step.key} className="flex-1 relative">
+                      <div className="flex flex-col items-center">
+                        {/* Circle */}
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                            step.completed
+                              ? 'bg-green-500 border-green-500 text-white'
+                              : step.active
+                              ? 'bg-blue-500 border-blue-500 text-white animate-pulse'
+                              : 'bg-gray-200 border-gray-300 text-gray-500'
+                          }`}
+                        >
+                          {step.completed ? (
+                            <Check className="w-5 h-5" />
+                          ) : (
+                            <span className="text-sm">{index + 1}</span>
+                          )}
+                        </div>
+                        {/* Label */}
+                        <div className="mt-2 text-xs font-medium text-gray-700" style={{ lineHeight: '1rem' }}>
+                          {step.label}
+                        </div>
                       </div>
-                      {/* Label */}
-                      <div className="mt-2 text-xs font-medium text-center text-gray-700">
-                        {step.label}
-                      </div>
+                      {/* Line */}
+                      {index < getStatusSteps().length - 1 && (
+                        <div
+                          className={`absolute top-5 left-1/2 w-full h-0.5 ${
+                            step.completed ? 'bg-green-500' : 'bg-gray-300'
+                          }`}
+                          style={{ transform: 'translateY(-50%)' }}
+                        />
+                      )}
                     </div>
-                    {/* Line */}
-                    {index < getStatusSteps().length - 1 && (
-                      <div
-                        className={`absolute top-5 left-1/2 w-full h-0.5 ${
-                          step.completed ? 'bg-green-500' : 'bg-gray-300'
-                        }`}
-                        style={{ transform: 'translateY(-50%)' }}
-                      />
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           )}
